@@ -1,0 +1,418 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel}
+\usepackage[a4paper,margin=2cm]{geometry}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{xcolor}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.45em}
+\renewcommand{\arraystretch}{1.18}
+\setlist{nosep,leftmargin=*}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+
+\title{Software Requirements Specification\\[0.4em]
+\large Writer's Creative Ideas Information System}
+\author{Academic / Engineering Project}
+\date{Draft for engineering baseline review\\Version 1.0}
+
+\begin{document}
+\maketitle
+\thispagestyle{empty}
+
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+Document status & Requirements baseline draft \\
+Methodology & Socratic Knowledge Elicitation \& Documentation (SKED) \\
+Guideline & IEEE 830-style SRS structure \\
+Target product & Offline-first mobile application \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\clearpage
+\tableofcontents
+\clearpage
+
+\section{Introduction}
+
+\subsection{Purpose}
+This Software Requirements Specification (SRS) defines the agreed scope, externally observable behavior, quality attributes, acceptance criteria, and behavioral scenarios for the Writer's Creative Ideas Information System. It is intended for the project owner, analysts, designers, implementers, testers, and academic reviewers. Requirement identifiers are stable references for specifications, tickets, tests, and implementation traceability.
+
+\subsection{Scope}
+The product is a smartphone application for capturing, organizing, linking, searching, and exporting literary creative material. A user can manage Books and Chapters, create Entries with preset Entry Types and Tags, associate Entries with Books and Chapters, and link Entries to one another. The application is offline-first and stores its working data locally in SQLite.
+
+The MVP is limited to iOS and Android. It does not provide a manuscript editor, web or desktop client, cloud synchronization, authentication, backend service, multi-user collaboration, publishing workflow, or complex project/deadline management. Text export to device-local storage is included.
+
+\subsection{Intended Audience and Reading Guidance}
+Section 2 describes context, users, platform, and constraints. Section 3 contains the normative functional and non-functional requirements. Section 4 defines acceptance evidence for every requirement. Section 5 specifies representative Given--When--Then (GWT) behavioral scenarios. Requirements use the word ``shall'' to indicate a mandatory product obligation.
+
+\subsection{Definitions}
+\begin{description}
+  \item[Book] A user-created container for creative material belonging to a literary project.
+  \item[Chapter] A named subdivision of a Book. Entries may be associated with a Chapter and with the Chapter's parent Book.
+  \item[Entry] A piece of creative material managed by the system. ``Note'' is a user-facing synonym, not a separate data entity.
+  \item[Entry Type] The preset primary classification of an Entry: Character, Scene, Plot Idea, World-building, Dialogue/Phrase, or General Note.
+  \item[Tag] A user-applied flexible label that supplements, and does not replace, an Entry Type.
+  \item[Standalone Entry] An Entry with no current Book or Chapter associations.
+  \item[Book Association] A direct relationship between an Entry and a Book as a whole.
+  \item[Chapter Association] A relationship between an Entry and a Chapter. It automatically implies association with the Chapter's parent Book. A direct Book Association is tracked separately.
+  \item[Entry Link] An unlabeled, symmetric relationship between two Entries, distinct from Book and Chapter associations.
+  \item[Quick Capture] The workflow for creating an Entry with minimal required input. A General Note can be created with Content only.
+  \item[Display Title] The title shown for an Entry. It is the explicit Title when nonblank; otherwise, it is derived from Content under REQ-F-003.
+  \item[Book Project Export] A text export of a Book and the Entries associated with it directly or through its Chapters.
+\end{description}
+
+\subsection{References}
+\begin{itemize}
+  \item IEEE Std 830-1998, \emph{IEEE Recommended Practice for Software Requirements Specifications}; used as a structural guideline. This document is not a claim of formal IEEE compliance or certification.
+  \item Approved SKED decisions recorded in the project conversation through 2026-09-26.
+\end{itemize}
+
+\subsection{Document Conventions}
+Identifiers beginning \texttt{REQ-F-} denote functional requirements. Identifiers beginning \texttt{REQ-NF-} denote non-functional requirements. Acceptance criteria use corresponding \texttt{AC-F-} and \texttt{AC-NF-} identifiers. GWT scenarios complement the individual criteria and do not replace them.
+
+\section{Overall Description}
+
+\subsection{Product Perspective}
+The product is a standalone mobile application. Its working dataset resides on the device in an SQLite database accessed through Expo SQLite. There is no server-side system, account service, or cloud synchronization in the MVP. The mobile operating system provides the runtime, accessibility services, and local file handling used for text export.
+
+\subsection{Product Functions}
+At a high level, the product provides:
+\begin{itemize}
+  \item quick capture and lifecycle management of Entries;
+  \item preset Entry Types and user-defined Tags;
+  \item Book and Chapter organization, including many-to-many Entry-to-Book association;
+  \item automatic parent-Book association for Chapter-associated Entries;
+  \item symmetric links between Entries;
+  \item case-insensitive full-text search and combined search/type/tag filtering;
+  \item local text export of an Entry or Book project; and
+  \item internal local diagnostic logging without a dedicated user-facing log interface.
+\end{itemize}
+
+\subsection{User Classes and Characteristics}
+The primary user class is an individual writer, novelist, screenwriter, or storyteller who needs to capture ideas on the move and later organize and retrieve a large volume of heterogeneous creative material. The MVP has one local user context per device; account or multi-user behavior is not defined.
+
+\subsection{Operating Environment}
+\begin{itemize}
+  \item Mobile application developed with React Native, Expo, and TypeScript.
+  \item Android 10.0 or later (API level 29 or later).
+  \item iOS 15.0 or later.
+  \item Minimum supported logical viewport: 360 by 640 device-independent pixels (dp).
+  \item On-device SQLite persistence using \texttt{expo-sqlite}.
+  \item Core application workflows must function without network connectivity.
+\end{itemize}
+
+\subsection{Design and Implementation Constraints}
+\begin{itemize}
+  \item The MVP is mobile-only; web and desktop implementations are excluded.
+  \item Working data is local. Cloud synchronization, user authentication, and backend services are excluded.
+  \item The Entry Types are a fixed preset set. Flexible categorization is provided by Tags, not user-created Entry Types.
+  \item Book and Chapter deletion must not cascade into deletion of Entries.
+  \item Entry Links are unlabeled and symmetric.
+  \item The codebase shall use TDD and meet the coverage thresholds in REQ-NF-014.
+\end{itemize}
+
+\subsection{User Documentation}
+In-app help content, onboarding, and end-user documentation are not specified by the approved MVP decisions. Their inclusion and format remain for project planning.
+
+\subsection{Assumptions and Dependencies}
+\begin{itemize}
+  \item The device has functional local storage and an operating-system-supported means of saving or selecting a local destination for exported files.
+  \item Availability of a file destination or permission may vary by platform; export failure must be reported as specified.
+  \item Normal operating conditions for performance measurement, export text layout, diagnostic-log retention, and some detailed matching behavior require a verification/design decision; these are recorded in Section 6 rather than silently assumed.
+\end{itemize}
+
+\section{Specific Requirements}
+
+\subsection{External Interface Requirements}
+\subsubsection{User Interface}
+The interface shall be designed for small smartphone screens and quick on-the-go capture. It shall provide workflows to create and manage Entries, Books, Chapters, Tags, and Entry Links; retrieve Entries; and initiate exports. Detailed screen layouts, navigation structure, and visual design are outside this SRS.
+
+\subsubsection{Software Interfaces}
+The application shall use React Native, Expo, TypeScript, and \texttt{expo-sqlite} for local relational persistence. It shall use platform capabilities as needed for local text-file export and accessibility. No remote application programming interface is in scope.
+
+\subsubsection{Communications Interfaces}
+No network communication is required for MVP behavior. The system shall not depend on a network service for capture, organization, search, or export.
+
+\subsubsection{Data and Export Interface}
+The local database shall represent Entries, Books, Chapters, Tags, Book Associations, Chapter Associations, Entry Links, and diagnostic events. Export output shall be a \texttt{.txt} file saved to device-local storage. UTF-8 encoding is required. Exact export metadata, punctuation, and file-naming conventions remain unspecified.
+
+\subsection{Functional Requirements}
+
+\subsubsection{Quick Capture and Entry Management}
+\begin{longtable}{|L{2.2cm}|L{13.6cm}|}
+\hline
+\textbf{ID} & \textbf{Requirement} \\
+\hline
+\endfirsthead
+\hline \textbf{ID} & \textbf{Requirement} \\
+\hline
+\endhead
+REQ-F-001 & The system shall allow the user to create an Entry through a Quick Capture workflow. \\ \hline
+REQ-F-002 & The system shall require nonblank Content to create an Entry. Title shall be optional. \\ \hline
+REQ-F-003 & When Title is blank, the system shall derive the Display Title from Content. The 25-character limit applies only to the body content of the Display Title; an ellipsis (``...'') is additional. If truncation occurs because Content exceeds 25 characters or because a newline occurs within the first 25 characters, the system shall append ``...'' after the retained body content. Content after the first newline shall not appear in the Display Title. \\ \hline
+REQ-F-004 & The system shall provide exactly these preset Entry Types: Character, Scene, Plot Idea, World-building, Dialogue/Phrase, and General Note. \\ \hline
+REQ-F-005 & The system shall allow the user to create a General Note with Content as the only required input. \\ \hline
+REQ-F-006 & The system shall allow the user to view an Entry's Content, explicit Title or generated Display Title, Entry Type, Tags, Book Associations, Chapter Associations, and Entry Links. \\ \hline
+REQ-F-007 & The system shall allow the user to edit an Entry's Content and Title, change its Entry Type, and add or remove its Tags, Book Associations, and Chapter Associations. \\ \hline
+REQ-F-008 & The system shall allow the user to delete an Entry. Deleting an Entry shall not leave active Entry Links to it. \\ \hline
+REQ-F-009 & The system shall allow the user to apply Tags to Entries and remove Tags from Entries. \\ \hline
+REQ-F-010 & The system shall allow an Entry to have no Book or Chapter Associations and remain available as a Standalone Entry for later association. \\ \hline
+\end{longtable}
+
+\subsubsection{Books, Chapters, and Associations}
+\begin{longtable}{|L{2.2cm}|L{13.6cm}|}
+\hline \textbf{ID} & \textbf{Requirement} \\
+\hline
+\endfirsthead
+\hline \textbf{ID} & \textbf{Requirement} \\
+\hline
+\endhead
+REQ-F-011 & The system shall allow the user to create, view, edit, and delete Books. \\ \hline
+REQ-F-012 & The system shall allow the user to create, view, edit, and delete Chapters within a Book. \\ \hline
+REQ-F-013 & The system shall allow the user to directly associate an Entry with a Book as a whole and remove that Book Association. \\ \hline
+REQ-F-014 & The system shall allow an Entry to have Book Associations with multiple Books. \\ \hline
+REQ-F-015 & The system shall allow the user to associate an Entry with a Chapter within a Book and remove that Chapter Association. \\ \hline
+REQ-F-016 & Associating an Entry with a Chapter shall automatically associate the Entry with that Chapter's parent Book. The system shall distinguish this Chapter-derived association from a separately created direct Book Association. \\ \hline
+REQ-F-017 & Deleting a Book or Chapter shall not delete associated Entries. The system shall remove associations to the deleted Book or Chapter while preserving associations to other extant Books or Chapters. An Entry with no remaining associations shall remain available as a Standalone Entry. \\ \hline
+REQ-F-018 & Removing or deleting a Chapter Association shall preserve a separately created direct Book Association to the Chapter's parent Book. A Book association that exists only because of that Chapter Association shall not remain solely by virtue of the deleted Chapter Association. \\ \hline
+\end{longtable}
+
+\subsubsection{Entry Linking}
+\begin{longtable}{|L{2.2cm}|L{13.6cm}|}
+\hline \textbf{ID} & \textbf{Requirement} \\
+\hline
+\endfirsthead
+\hline \textbf{ID} & \textbf{Requirement} \\
+\hline
+\endhead
+REQ-F-019 & The system shall allow the user to link two Entries without assigning a label to the Entry Link. \\ \hline
+REQ-F-020 & Entry Links shall be symmetric: linking Entry A to Entry B shall make the link visible from both Entries. \\ \hline
+REQ-F-021 & The system shall allow the user to remove an Entry Link. Removing the link shall not delete either Entry. \\ \hline
+\end{longtable}
+
+\subsubsection{Retrieval and Search}
+\begin{longtable}{|L{2.2cm}|L{13.6cm}|}
+\hline \textbf{ID} & \textbf{Requirement} \\
+\hline
+\endfirsthead
+\hline \textbf{ID} & \textbf{Requirement} \\
+\hline
+\endhead
+REQ-F-022 & The system shall provide case-insensitive full-text search across both Entry Title and Entry Content and display matching Entries. A generated Display Title shall be searchable as the Entry's displayed title. \\ \hline
+REQ-F-023 & The system shall allow the user to filter Entries by Entry Type. When multiple Entry Types are selected, an Entry shall match all selected Entry Types (strict AND logic). \\ \hline
+REQ-F-024 & The system shall allow the user to filter Entries by Tag. When multiple Tags are selected, an Entry shall match all selected Tags (strict AND logic). \\ \hline
+REQ-F-025 & When Search, Entry Type, and Tag criteria are combined, the system shall use strict AND logic across categories: a result shall satisfy every active criterion. Strict AND logic shall also apply among multiple selected Entry Types and among multiple selected Tags. \\ \hline
+\end{longtable}
+
+\subsubsection{Export}
+\begin{longtable}{|L{2.2cm}|L{13.6cm}|}
+\hline \textbf{ID} & \textbf{Requirement} \\
+\hline
+\endfirsthead
+\hline \textbf{ID} & \textbf{Requirement} \\
+\hline
+\endhead
+REQ-F-026 & The system shall allow the user to export an Entry as a \texttt{.txt} file to device-local storage. The exported file shall contain the Entry's Content. \\ \hline
+REQ-F-027 & The system shall allow the user to export a Book project as a \texttt{.txt} file to device-local storage. \\ \hline
+REQ-F-028 & A Book Project Export shall include Entries associated directly with the Book and Entries associated with any of its Chapters. Chapter-associated Entries shall appear under their respective Chapter headings. Chapters shall be ordered by an internal integer position field in ascending order when that field is available; otherwise, they shall be ordered by \texttt{created\_at} ascending. Direct Book-level Entries not placed under a Chapter shall appear in a dedicated ``General Book Notes'' section at the end. \\ \hline
+REQ-F-029 & Each Entry shall appear no more than once in a Book Project Export. An Entry associated with a Chapter and its parent Book shall appear under the Chapter heading and not be duplicated in ``General Book Notes''. \\ \hline
+\end{longtable}
+
+\subsection{Non-Functional Requirements}
+\begin{longtable}{|L{2.4cm}|L{13.6cm}|}
+\hline \textbf{ID} & \textbf{Requirement} \\
+\hline
+\endfirsthead
+\hline \textbf{ID} & \textbf{Requirement} \\
+\hline
+\endhead
+REQ-NF-001 & Under normal operating conditions (a local SQLite database pre-populated with 1,000 Entries running on an iOS 15 or later simulator or an Android 10 or later emulator), the system shall save a new Entry and confirm completion within 1 second. \\ \hline
+REQ-NF-002 & Under normal operating conditions (a local SQLite database pre-populated with 1,000 Entries running on an iOS 15 or later simulator or an Android 10 or later emulator), the system shall return search and filter results within 2 seconds. \\ \hline
+REQ-NF-003 & The system's core capture, organization, search, and export workflows shall operate without an internet connection. \\ \hline
+REQ-NF-004 & The system shall store working data locally on the device in SQLite using \texttt{expo-sqlite}. Persisted data shall remain available after the application is closed and reopened. \\ \hline
+REQ-NF-005 & The system shall preserve valid relationships among Entries, Books, Chapters, Tags, Book Associations, Chapter Associations, and Entry Links when records or associations are created, edited, detached, or deleted. \\ \hline
+REQ-NF-006 & Deleting a Book or Chapter shall not cause loss of the Content or identity of any associated Entry. \\ \hline
+REQ-NF-007 & The application shall install and operate on Android 10.0 or later (API 29 or later) and iOS 15.0 or later. \\ \hline
+REQ-NF-008 & Core workflows shall be usable at a minimum viewport of 360 by 640 dp without clipped interactive controls or unintended horizontal scrolling. \\ \hline
+REQ-NF-009 & All interactive UI controls shall have explicit React Native \texttt{accessibilityLabel} attributes. The interface shall support platform text scaling without making core workflows inaccessible. \\ \hline
+REQ-NF-010 & Exported \texttt{.txt} files shall use UTF-8 encoding and preserve representative accented and non-Latin text. \\ \hline
+REQ-NF-011 & If an export cannot be completed, the system shall notify the user, shall not report success, and shall not present a partial file as a completed export. \\ \hline
+REQ-NF-012 & The system shall maintain an internal, device-local diagnostic/audit log recording the occurrence and time of Entry, Book, and Chapter creation, update, and deletion; association and Entry Link changes; and export operations. Timestamps shall use ISO-8601 format in UTC. The log shall have a maximum size of 2 MB and shall rotate on a first-in, first-out (FIFO) basis by removing the oldest log records when necessary to remain within the limit. \\ \hline
+REQ-NF-013 & The MVP shall not provide a dedicated user-facing interface for viewing or managing the diagnostic log. \\ \hline
+REQ-NF-014 & The codebase shall be developed using Test-Driven Development (TDD). Domain logic and SQLite repositories shall have automated unit and integration tests with at least 85 percent statement and branch coverage, measured using Jest with \texttt{npm test -- --coverage} (excluding \texttt{*.config.js} and \texttt{*.d.ts}). Additionally, the engineering process shall maintain project logs recording requirement conflict resolution, coding-agent (AI co-pilot) interaction prompts and decisions, and key technical trade-offs alongside technical documentation in the project repository. \\ \hline
+\end{longtable}
+
+\section{Acceptance Criteria}
+Each criterion below states observable evidence for its associated requirement. Criteria are concise verification conditions and are not written in GWT form.
+
+\subsection{Functional Acceptance Criteria}
+\begin{longtable}{|L{2.4cm}|L{13.6cm}|}
+\hline \textbf{ID} & \textbf{Acceptance criterion} \\
+\hline
+\endfirsthead
+\hline \textbf{ID} & \textbf{Acceptance criterion} \\
+\hline
+\endhead
+AC-F-001 & A Quick Capture action creates an Entry, and the Entry is available in the Entry list. \\ \hline
+AC-F-002 & Nonblank Content with no Title can be saved. Blank Content is rejected with a validation message. \\ \hline
+AC-F-003 & With blank Title, Content of 25 characters or fewer and no newline displays unchanged. When Content exceeds 25 characters, the first 25 body characters are followed by ``...''. When a newline occurs within the first 25 characters, the body ends before the newline and ``...'' is appended; no text from subsequent lines appears. The ellipsis does not count toward the 25-character body limit. \\ \hline
+AC-F-004 & The type selector offers the six specified preset types, and each can be assigned to an Entry. \\ \hline
+AC-F-005 & A General Note can be saved with Content as the only supplied field. \\ \hline
+AC-F-006 & Viewing an Entry displays its Content, explicit or generated title, Entry Type, Tags, Book and Chapter Associations, and Entry Links. \\ \hline
+AC-F-007 & Changes to an Entry's Content, Title, Entry Type, Tags, and Book or Chapter Associations persist and appear on subsequent viewing. \\ \hline
+AC-F-008 & A deleted Entry is absent from lists and search results, and no active Entry Link points to it. \\ \hline
+AC-F-009 & A Tag can be added to an Entry, appears in its details, and can be removed. \\ \hline
+AC-F-010 & An unassociated Entry remains available as standalone and can subsequently be associated with a Book or Chapter. \\ \hline
+AC-F-011 & The user can create, view, edit, and delete Books. Book deletion leaves associated Entries intact. \\ \hline
+AC-F-012 & The user can create, view, edit, and delete Chapters within a Book. Chapter deletion leaves associated Entries intact. \\ \hline
+AC-F-013 & A direct Book Association can be created, displayed, and removed. \\ \hline
+AC-F-014 & One Entry can be associated with at least two Books and appears under each. \\ \hline
+AC-F-015 & A Chapter Association can be created, displayed, and removed. \\ \hline
+AC-F-016 & Creating a Chapter Association also creates the parent Book association; the data distinguishes this derived relation from a direct Book Association. \\ \hline
+AC-F-017 & Deleting a Book or Chapter leaves Entry content intact, removes associations to deleted records, preserves remaining valid associations, and leaves Entries with no associations available as standalone. \\ \hline
+AC-F-018 & Removing a Chapter Association preserves an independent direct Book Association. A Book association that existed only through the Chapter is removed when that Chapter association is removed and no other relation implies it. \\ \hline
+AC-F-019 & Two Entries can be linked without a label; linking does not alter their Entry content or type. \\ \hline
+AC-F-020 & After linking Entries A and B, each Entry displays the other as linked. \\ \hline
+AC-F-021 & Removing the link from either Entry removes it from both link lists; both Entries remain available. \\ \hline
+AC-F-022 & A case-insensitive query matching text in either Title or Content returns the Entry; a query with no match returns no such Entry. \\ \hline
+AC-F-023 & Applying an Entry Type filter returns matching Entries and excludes Entries of other types. \\ \hline
+AC-F-024 & Applying a Tag filter returns Entries with the selected Tag. When multiple Tags are selected, only Entries with every selected Tag are returned. \\ \hline
+AC-F-025 & With Search, Type, and Tag active, every result matches all active criteria; an Entry failing any criterion is excluded. When multiple Entry Types or Tags are selected, a result matches every selected value within that category. \\ \hline
+AC-F-026 & Export creates a local \texttt{.txt} file containing the Entry's Content. \\ \hline
+AC-F-027 & Export creates a local \texttt{.txt} file for the selected Book project. \\ \hline
+AC-F-028 & The export includes directly associated and Chapter-associated Entries; Chapter entries occur beneath their Chapter headings ordered by ascending internal integer position when available, otherwise by ascending \texttt{created\_at}. Direct Book-level Entries not placed under Chapters occur under ``General Book Notes'' at the end. \\ \hline
+AC-F-029 & An Entry associated with both a Chapter and its parent Book occurs once, under its Chapter heading, and not again in ``General Book Notes''. \\ \hline
+\end{longtable}
+
+\subsection{Non-Functional Acceptance Criteria}
+\begin{longtable}{|L{2.5cm}|L{13.5cm}|}
+\hline \textbf{ID} & \textbf{Acceptance criterion} \\
+\hline
+\endfirsthead
+\hline \textbf{ID} & \textbf{Acceptance criterion} \\
+\hline
+\endhead
+AC-NF-001 & On an iOS 15+ simulator or Android 10+ emulator with a local SQLite database pre-populated with 1,000 Entries, Entry save and success confirmation complete within 1 second. \\ \hline
+AC-NF-002 & On an iOS 15+ simulator or Android 10+ emulator with a local SQLite database pre-populated with 1,000 Entries, search and filter results appear within 2 seconds. \\ \hline
+AC-NF-003 & With network connectivity disabled, capture, organization, search, and export complete using local data. \\ \hline
+AC-NF-004 & Inspection confirms use of the on-device SQLite database via \texttt{expo-sqlite}; saved data remains after closing and reopening the app. \\ \hline
+AC-NF-005 & Tests of create, edit, associate, detach, and delete operations show no dangling references and show only valid remaining relationships. \\ \hline
+AC-NF-006 & After Book or Chapter deletion, associated Entry identity and Content remain retrievable. \\ \hline
+AC-NF-007 & The release application installs and launches on Android API 29+ and iOS 15+. \\ \hline
+AC-NF-008 & At 360 by 640 dp, core workflows have no clipped interactive controls or unintended horizontal scrolling. \\ \hline
+AC-NF-009 & Every interactive UI control has an explicit React Native \texttt{accessibilityLabel} attribute; platform text scaling does not block completion of core workflows. \\ \hline
+AC-NF-010 & Exported files decode as UTF-8 and preserve representative accented and non-Latin test strings. \\ \hline
+AC-NF-011 & A simulated or induced export failure produces an error indication, no success indication, and no partial file reported as complete. \\ \hline
+AC-NF-012 & Inspection confirms that each required event is timestamped in ISO-8601 UTC format and that log rotation retains no more than 2 MB of records by removing the oldest records first. \\ \hline
+AC-NF-013 & The MVP contains no dedicated user-facing screen or controls for viewing or managing diagnostic logs. \\ \hline
+AC-NF-014 & Development evidence demonstrates a tests-first workflow with at least 85 percent statement and branch coverage reported by Jest for domain logic and SQLite repositories. Repository audit also confirms the presence of engineering logs documenting requirement conflict resolution, coding-agent prompts and responses, and architectural decisions. \\ \hline
+\end{longtable}
+
+\section{Behavioral Scenarios (Given--When--Then)}
+The following scenarios are representative acceptance-level examples. They complement, but do not exhaust, the acceptance criteria above.
+
+\subsection*{Scenario 1: Generate a Display Title}
+\textbf{Given} an Entry is created with a blank Title\\
+\textbf{When} the user saves Content\\
+\textbf{Then} the system generates a Display Title whose body is limited to the first 25 characters\\
+\textbf{And} if the Content exceeds 25 characters or a newline occurs within the first 25 characters, the system appends ``...'' after the retained body, outside the 25-character limit\\
+\textbf{And} no text after the first newline appears in the Display Title.
+
+\subsection*{Scenario 2: Create an Entry with All Details}
+\textbf{Given} the user is creating an Entry and has entered an explicit Title and Content, selected an Entry Type, and added Tags\\
+\textbf{When} the user saves the Entry\\
+\textbf{Then} the Entry is saved with the entered Title and Content, selected Entry Type, and Tags\\
+\textbf{And} viewing the Entry shows those saved values without replacing the explicit Title with a generated one.
+
+\subsection*{Scenario 3: Chapter and Book Associations}
+\textbf{Given} an Entry's only Chapter Association in Book A is to the Chapter being deleted, and it is also directly associated with Book B\\
+\textbf{When} the user deletes that Chapter\\
+\textbf{Then} the Entry remains available and its association with Book B remains\\
+\textbf{And} it is no longer associated with the deleted Chapter or its Chapter-derived Book A association.
+
+\textbf{Given} an Entry has no association other than one with a Chapter\\
+\textbf{When} the user deletes that Chapter\\
+\textbf{Then} the Entry remains available as a Standalone Entry.
+
+\textbf{Given} an Entry is associated with a Book\\
+\textbf{When} the user deletes that Book\\
+\textbf{Then} the Entry remains available and is detached from the deleted Book.
+
+\subsection*{Scenario 4: Symmetric Entry Links}
+\textbf{Given} Entries A and B exist and are not linked\\
+\textbf{When} the user links A to B\\
+\textbf{Then} B appears in A's links and A appears in B's links.
+
+\textbf{When} the user removes the link from either Entry\\
+\textbf{Then} the link no longer appears for either Entry, and both Entries remain available.
+
+\subsection*{Scenario 5: Search and Combined Filters}
+\textbf{Given} Entries contain matching text in their Titles or Contents using different letter cases\\
+\textbf{When} the user searches for that text\\
+\textbf{Then} all Entries with a case-insensitive match in either field appear, and Entries without a match do not.
+
+\textbf{Given} Entries have different Entry Types and Tags\\
+\textbf{When} the user applies a search term, multiple Entry Type values, and multiple Tag values together\\
+\textbf{Then} each result matches the search term and every selected Entry Type and Tag\\
+\textbf{And} Entries that fail any one of these criteria do not appear.
+
+\subsection*{Scenario 6: Export Book Project in Chapter Order}
+\textbf{Given} a Book has Chapters in sequential order, Entries associated with those Chapters, and Entries associated directly with the Book\\
+\textbf{When} the user exports the Book project\\
+\textbf{Then} Chapter-associated Entries appear under their respective Chapter headings, with Chapters sorted by ascending internal position when available and otherwise by ascending \texttt{created\_at}\\
+\textbf{And} Entries associated directly with the Book but not placed under a Chapter appear in a dedicated ``General Book Notes'' section at the end\\
+\textbf{And} an Entry associated with both a Chapter and the Book appears once, under its Chapter heading.
+
+\subsection*{Scenario 7: Offline Use and Persistence}
+\textbf{Given} the device has no network connection\\
+\textbf{When} the user creates and organizes an Entry, searches for it, and exports it\\
+\textbf{Then} these operations use local data and complete without network access.
+
+\textbf{When} the user closes and reopens the app while still offline\\
+\textbf{Then} the Entry and its saved Content remain available.
+
+\subsection*{Scenario 8: Create and Structure a General Note}
+\textbf{Given} the user has an idea to capture\\
+\textbf{When} the user creates a General Note with Content only\\
+\textbf{Then} the Entry is saved as a General Note without requiring a Title, Tag, Book, or Chapter.
+
+\textbf{When} the user later changes its Entry Type, adds a Tag, and associates it with a Book or Chapter\\
+\textbf{Then} those changes are saved and displayed when the Entry is viewed again.
+
+\subsection*{Scenario 9: Export Success and Failure}
+\textbf{Given} an Entry contains representative accented and non-Latin text\\
+\textbf{When} the user successfully exports the Entry\\
+\textbf{Then} a \texttt{.txt} file is available in device-local storage and preserves the text when decoded as UTF-8.
+
+\textbf{Given} a local storage error prevents an export from completing\\
+\textbf{When} the user attempts the export\\
+\textbf{Then} the app reports the failure and does not indicate that the export succeeded.
+
+\subsection*{Scenario 10: Delete an Entry}
+\textbf{Given} an Entry exists and is linked to another Entry\\
+\textbf{When} the user deletes the Entry\\
+\textbf{Then} the deleted Entry is absent from Entry lists and search results\\
+\textbf{And} no active Entry Link points to the deleted Entry\\
+\textbf{And} the other linked Entry remains available.
+
+\section{Traceability and Outstanding Specification Details}
+The acceptance criteria are keyed directly to requirement identifiers. Functional criteria \texttt{AC-F-001} through \texttt{AC-F-029} map one-to-one to \texttt{REQ-F-001} through \texttt{REQ-F-029}; non-functional criteria \texttt{AC-NF-001} through \texttt{AC-NF-014} map one-to-one to \texttt{REQ-NF-001} through \texttt{REQ-NF-014}. The GWT scenarios exercise key cross-requirement workflows and cite the same observable behavior.
+
+The following details were not decided during SKED and must be specified in the design, verification plan, or a later SRS revision before their related checks can be fully reproducible:
+\begin{itemize}
+  \item whether users can manually reorder Chapters, beyond the export ordering rule specified in REQ-F-028;
+  \item exact text layout, metadata, file naming, and platform destination-selection behavior for exports;
+  \item diagnostic-log redaction and timestamp precision; and
+  \item the precise definition of domain logic and repository code included in the REQ-NF-014 coverage scope.
+\end{itemize}
+
+\end{document}

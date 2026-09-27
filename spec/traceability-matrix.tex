@@ -1,0 +1,82 @@
+\documentclass[10pt,a4paper]{article}
+
+\usepackage[landscape,a4paper,margin=1.4cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage[hidelinks]{hyperref}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.5em}
+\renewcommand{\arraystretch}{1.15}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+
+\title{Requirements Traceability Matrix\\[0.3em]
+\large Writer's Creative Ideas Information System}
+\author{Academic / Engineering Project}
+\date{Initial baseline}
+
+\begin{document}
+\maketitle
+
+This matrix links each approved requirement to its acceptance criterion and to any applicable Given--When--Then (BDD) scenario in the SRS. Scenario references use the numbering and titles in Section 5 of \texttt{spec/srs.tex}. Blank columns are reserved for future ticket, automated test, code, and documentation references; blank means not yet assigned.
+
+\small
+\begin{longtable}{|L{2.5cm}|L{2.6cm}|L{4.4cm}|L{3.3cm}|L{3.3cm}|L{3.3cm}|L{3.3cm}|}
+\hline
+\textbf{Requirement ID} & \textbf{Acceptance Criterion} & \textbf{BDD Scenario} & \textbf{Ticket} & \textbf{Test} & \textbf{Code} & \textbf{Documentation} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Requirement ID} & \textbf{Acceptance Criterion} & \textbf{BDD Scenario} & \textbf{Ticket} & \textbf{Test} & \textbf{Code} & \textbf{Documentation} \\
+\hline
+\endhead
+REQ-F-001 & AC-F-001 & S7: Offline Use and Persistence & & & & \\ \hline
+REQ-F-002 & AC-F-002 & S2: Create an Entry with All Details & & & & \\ \hline
+REQ-F-003 & AC-F-003 & S1: Generate a Display Title; S2: Create an Entry with All Details & & & & \\ \hline
+REQ-F-004 & AC-F-004 & S2: Create an Entry with All Details; S8: Create and Structure a General Note & & & & \\ \hline
+REQ-F-005 & AC-F-005 & S8: Create and Structure a General Note & & & & \\ \hline
+REQ-F-006 & AC-F-006 & S2: Create an Entry with All Details; S8: Create and Structure a General Note & & & & \\ \hline
+REQ-F-007 & AC-F-007 & S2: Create an Entry with All Details; S8: Create and Structure a General Note & & & & \\ \hline
+REQ-F-008 & AC-F-008 & S10: Delete an Entry & & & & \\ \hline
+REQ-F-009 & AC-F-009 & S2: Create an Entry with All Details; S8: Create and Structure a General Note & & & & \\ \hline
+REQ-F-010 & AC-F-010 & S3: Chapter and Book Associations & & & & \\ \hline
+REQ-F-011 & AC-F-011 & S3: Chapter and Book Associations & & & & \\ \hline
+REQ-F-012 & AC-F-012 & S3: Chapter and Book Associations; S6: Export Book Project in Chapter Order & & & & \\ \hline
+REQ-F-013 & AC-F-013 & S3: Chapter and Book Associations; S8: Create and Structure a General Note & & & & \\ \hline
+REQ-F-014 & AC-F-014 & S3: Chapter and Book Associations & & & & \\ \hline
+REQ-F-015 & AC-F-015 & S3: Chapter and Book Associations; S8: Create and Structure a General Note & & & & \\ \hline
+REQ-F-016 & AC-F-016 & S3: Chapter and Book Associations & & & & \\ \hline
+REQ-F-017 & AC-F-017 & S3: Chapter and Book Associations & & & & \\ \hline
+REQ-F-018 & AC-F-018 & S3: Chapter and Book Associations & & & & \\ \hline
+REQ-F-019 & AC-F-019 & S4: Symmetric Entry Links & & & & \\ \hline
+REQ-F-020 & AC-F-020 & S4: Symmetric Entry Links & & & & \\ \hline
+REQ-F-021 & AC-F-021 & S4: Symmetric Entry Links & & & & \\ \hline
+REQ-F-022 & AC-F-022 & S5: Search and Combined Filters; S7: Offline Use and Persistence & & & & \\ \hline
+REQ-F-023 & AC-F-023 & S5: Search and Combined Filters & & & & \\ \hline
+REQ-F-024 & AC-F-024 & S5: Search and Combined Filters & & & & \\ \hline
+REQ-F-025 & AC-F-025 & S5: Search and Combined Filters & & & & \\ \hline
+REQ-F-026 & AC-F-026 & S7: Offline Use and Persistence; S9: Export Success and Failure & & & & \\ \hline
+REQ-F-027 & AC-F-027 & S6: Export Book Project in Chapter Order & & & & \\ \hline
+REQ-F-028 & AC-F-028 & S6: Export Book Project in Chapter Order & & & & \\ \hline
+REQ-F-029 & AC-F-029 & S6: Export Book Project in Chapter Order & & & & \\ \hline
+REQ-NF-001 & AC-NF-001 & NFR verification: save latency with 1,000-entry SQLite fixture on minimum OS simulator/emulator & & & & \\ \hline
+REQ-NF-002 & AC-NF-002 & NFR verification: search/filter latency with 1,000-entry SQLite fixture on minimum OS simulator/emulator & & & & \\ \hline
+REQ-NF-003 & AC-NF-003 & S7: Offline Use and Persistence & & & & \\ \hline
+REQ-NF-004 & AC-NF-004 & S7: Offline Use and Persistence & & & & \\ \hline
+REQ-NF-005 & AC-NF-005 & S3: Chapter and Book Associations; NFR verification: relationship integrity across create/edit/detach/delete & & & & \\ \hline
+REQ-NF-006 & AC-NF-006 & S3: Chapter and Book Associations & & & & \\ \hline
+REQ-NF-007 & AC-NF-007 & NFR verification: install and launch on Android API 29+ and iOS 15+ & & & & \\ \hline
+REQ-NF-008 & AC-NF-008 & NFR verification: core workflows at 360 x 640 dp viewport & & & & \\ \hline
+REQ-NF-009 & AC-NF-009 & NFR verification: accessibilityLabel presence and platform text scaling & & & & \\ \hline
+REQ-NF-010 & AC-NF-010 & S9: Export Success and Failure & & & & \\ \hline
+REQ-NF-011 & AC-NF-011 & S9: Export Success and Failure & & & & \\ \hline
+REQ-NF-012 & AC-NF-012 & NFR verification: ISO-8601 UTC timestamps and 2 MB FIFO log rotation & & & & \\ \hline
+REQ-NF-013 & AC-NF-013 & NFR verification: confirm no user-facing diagnostic-log UI & & & & \\ \hline
+REQ-NF-014 & AC-NF-014 & NFR verification: TDD evidence and Jest statement/branch coverage thresholds & & & & \\ \hline
+\end{longtable}
+
+\end{document}
