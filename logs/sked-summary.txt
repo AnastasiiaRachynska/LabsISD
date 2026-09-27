@@ -1,0 +1,35 @@
+	Summary of the SKED dialogue
+	As a result of the SKED dialogue, project boundaries were established, functional and non-functional requirements along with their acceptance criteria were formulated, and Given–When–Then scenarios were defined. During the process, various uncertainties were identified and resolved, culminating in the creation of the SRS document.
+
+1. Identified Uncertainties and Decisions (Human Scope Decisions)
+During the Socratic dialogue, the AI posed a series of clarifying questions regarding project boundaries, architecture, and business logic. Based on human responses, the following decisions were finalized:
+	-Is writing manuscripts, collaborative work, and cloud synchronization included in the MVP? Decision: The MVP is strictly a mobile offline-first idea organizer (React Native, Expo, TypeScript, SQLite) targeting Android 10+ and iOS 15+ (min. viewport 360x640 dp). Text authoring, cloud sync, and task management are explicitly out of scope.
+	- How should the system behave if an entry title is not manually provided? Decision: The title is automatically generated from the first 25 characters of the content body. If a newline character (`\n`) occurs prior to the 25th character, the title is truncated at the first line.
+	- What happens to entries when a Book or Chapter is deleted? Decision: The Safe Detach rule applies — deleting a container entity never deletes associated entries; they are simply detached and remain autonomous (General Notes).
+	- What logic applies when combining multiple search filters? Decision: Search is case-insensitive. Filters (`Search Keyword` AND `Type` AND `Tag`) evaluate strictly using AND logic.
+	- In what formats and order are materials exported? Decision: Exporting is performed in `.txt` and `.md` formats (UTF-8). Chapter entries are exported sequentially, while general book notes are appended in a final "General Book Notes" block. Duplicate entries are strictly prohibited.
+	- What are the requirements for testing and system logs? Decision: Mandatory TDD (Jest) with statement and branch coverage $\ge 85\%$. Logging is strictly an internal diagnostic mechanism for developers and does not require a dedicated UI.
+
+2. Adjusted and Rejected Model Assumptions
+During the discussion, several initial hypotheses proposed by the AI were rejected or refined:
+- The model initially suggested a 40-character limit; the human reduced it to 25 characters and introduced the newline (`\n`) truncation rule.
+- Cascading deletion and entry reorganization were rejected in favor of the Safe Detach rule.
+- Unstructured note output was rejected in favor of a strict hierarchical structure with a dedicated general notes block at the end.
+- Logging was relocated from functional requirements (which assumed a dedicated UI) to non-functional diagnostic requirements (NFRs).
+- Initial variants focused solely on quick note-taking; a scenario for direct entry creation with full attributes was added.
+
+3. Uncertainties Left for Future Phases
+- Explicit rules for appending `...` when a title is truncated at a newline character (`\n`) prior to the 25th character.
+- Detailed specification of AND/OR evaluation logic when selecting multiple tags or entry types simultaneously.
+- Precise rotation parameters, file size limits, and time formatting for the diagnostic log file.
+
+	Based on the results of the initial specification audit, a number of contradictions, ambiguous terms, and uncertainties were identified that impeded reproducible testing. To resolve these, targeted updates were applied to the spec/srs.tex and traceability-matrix.tex files.Here is how the primary identified issues were resolved:
+- Display Title Rule (REQ-F-003): Ambiguity regarding title length was eliminated — it was strictly established that the 25-character limit applies solely to the note content body, and the ellipsis ... is appended beyond this limit upon truncation or a newline character (\n) (resulting in a final string length of up to 28 characters).
+- Performance Benchmark Conditions (REQ-NF-001 / REQ-NF-002): The ambiguous term "normal operating conditions" received a precise operational definition — testing on a local SQLite database populated with 1,000 entries running on an iOS 15+ simulator or Android 10+ emulator.
+- Coverage Configuration and TDD (REQ-NF-014): Unclarity in coverage evaluation was removed — Jest (npm test -- --coverage) was established as the coverage tool, with an explicit exclusion list (*.config.js, *.d.ts).
+- Logging Parameters (REQ-NF-012): Missing diagnostic log parameters were specified — the timestamp format was set to ISO-8601 (UTC), alongside a 2 MB file rotation limit following FIFO principles.
+- Accessibility Subjectivity (REQ-NF-009): The untestable phrase "meaningful labels" was replaced with a concrete technical requirement — the mandatory presence of explicit accessibilityLabel attributes on all interactive UI controls.
+- Chapter Ordering Rule (REQ-F-028): The ambiguous "sequential order" was formalized as sorting by created_at ASC or an internal integer position field.
+- Multiple Filter Logic (REQ-F-024 / REQ-F-025): Strict AND evaluation logic was fixed for cases where multiple tags or entry types are selected simultaneously within the same category.
+- Gaps in Traceability Matrix: Empty cells for REQ-F-006, REQ-F-008, and all non-functional requirements (REQ-NF-*) were completely populated and mapped to their corresponding BDD scenarios or system verification checks.	
+	Certain secondary details remain partially resolved: for example, in export processing (REQ-F-026 / REQ-F-027), chapter ordering was established, whereas extended file naming conventions and platform-specific save dialogs depend on the underlying operating system.
