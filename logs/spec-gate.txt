@@ -1,24 +1,9 @@
-SPEC-GATE: Software Requirements Specification architecture revision
+SPEC-GATE: Software Requirements Specification creation
 
-The SRS and Requirements Traceability Matrix have been revised from the offline-only baseline to a client-server architecture with a local-first mobile client. The current LaTeX sources are spec/srs.tex and spec/traceability-matrix.tex; their corresponding PDFs, spec/srs.pdf and spec/traceability-matrix.pdf, were regenerated from those sources on 2026-10-16.
+The baseline version of the Software Requirements Specification (SRS) for the mobile idea organizer system was approved and files spec/srs.tex and traceability-matrix.tex were created.
 
-Architecture and scope decisions recorded in Version 2.0:
-- A mobile client communicates with a backend using a versioned REST API at /api/v1, over HTTPS, with UTF-8 JSON representations.
-- The client retains a local SQLite working copy and durable outbox. Core workflows continue offline for locally available data; pending changes synchronize when connectivity returns.
-- The server is authoritative for acknowledged changes. Sync requirements cover stable client identifiers, cursors, tombstones, idempotent operation retries, revision-conflict detection, and preserving unsynchronized local edits.
-- API operations cover Entries, Books, Chapters, Tags, Entry associations, Entry Links, search/filtering, and synchronization.
-- API access is restricted to an authenticated user context and must not expose another user's records. Authentication implementation details remain a design-stage decision.
-- The API and Mock API stages are prepared by a requirement for an OpenAPI specification covering routes, schemas, security, errors, pagination, revisions/conflicts, cursors, and tombstones.
-- The mobile target remains Android 10+ and iOS 15+. A web client may use the same API, but browser support and web release requirements remain unspecified.
-- Existing creative-domain rules remain: Entry Types, safe detach on Book/Chapter deletion, symmetric Entry Links, strict AND search/filter behavior, export rules, and local offline workflows.
-
-Traceability and verification:
-- The SRS defines 29 domain functional requirements (REQ-F-001 through REQ-F-029), 14 API/synchronization requirements (REQ-API-001 through REQ-API-014), and 14 non-functional requirements (REQ-NF-001 through REQ-NF-014).
-- Each of the 57 requirements has a corresponding acceptance criterion; the RTM contains all 57 requirement IDs and all 57 distinct acceptance-criterion IDs.
-- Thirteen GWT scenarios cover key domain, offline, synchronization, retry, and concurrent-update workflows.
-- Both LaTeX documents compiled successfully with pdflatex. The generated PDFs were updated in spec/.
-- Identifier consistency and git diff whitespace checks passed. No software implementation tests were run; this gate records a requirements/documentation revision.
-
-Details intentionally deferred to design or later specification work include the authentication mechanism and account lifecycle, complete JSON schemas, deployment and service-availability targets, browser support, sync batch transaction/dependency rules, conflict-resolution UI, cursor expiry and tombstone retention, and export presentation details. These decisions must not weaken the offline workflow, ownership boundary, safe-detach behavior, idempotent retry, or conflict-preservation requirements.
-
-This Version 2.0 architecture baseline supersedes the prior offline-only statements in the original SKED summary and earlier specification baseline. The SKED history remains historical context; the current normative requirements are in spec/srs.tex and spec/traceability-matrix.tex.
+The following tasks were completed:
+- Conducted a structured SKED dialogue, the summary of which is recorded in logs/sked-summary.md;
+- The specification contains functional and non-functional requirements with identifiers and priorities, acceptance criteria, BDD scenarios for key behavioral requirements, and a fully populated traceability matrix;
+- Executed a quality audit of the specification that identified and resolved key defects: subjective formulations ("meaningful labels", "normal operating conditions"), unclear Jest coverage configuration (>= 85%), undefined log rotation parameters (ISO-8601 UTC, 2 MB FIFO), the Display Title generation rule (25 characters + ...), Chapter sorting order, and missing entries in the traceability matrix;
+- Established strict AND logic for multi-filters.
