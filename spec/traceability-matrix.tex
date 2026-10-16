@@ -17,12 +17,12 @@
 \title{Requirements Traceability Matrix\\[0.3em]
 \large Writer's Creative Ideas Information System}
 \author{Academic / Engineering Project}
-\date{Initial baseline}
+\date{Revised client-server baseline}
 
 \begin{document}
 \maketitle
 
-This matrix links each approved requirement to its acceptance criterion and to any applicable Given--When--Then (BDD) scenario in the SRS. Scenario references use the numbering and titles in Section 5 of \texttt{spec/srs.tex}. Blank columns are reserved for future ticket, automated test, code, and documentation references; blank means not yet assigned.
+This matrix links each requirement to its acceptance criterion and to any applicable Given--When--Then (BDD) scenario in the SRS. Scenario references use the numbering and titles in Section 5 of \texttt{spec/srs.tex}. Architectural requirements cover the mobile client, REST API resources, and offline synchronization. Blank columns are reserved for future ticket, automated test, code, and documentation references; blank means not yet assigned.
 
 \small
 \begin{longtable}{|L{2.5cm}|L{2.6cm}|L{4.4cm}|L{3.3cm}|L{3.3cm}|L{3.3cm}|L{3.3cm}|}
@@ -63,6 +63,14 @@ REQ-F-026 & AC-F-026 & S7: Offline Use and Persistence; S9: Export Success and F
 REQ-F-027 & AC-F-027 & S6: Export Book Project in Chapter Order & & & & \\ \hline
 REQ-F-028 & AC-F-028 & S6: Export Book Project in Chapter Order & & & & \\ \hline
 REQ-F-029 & AC-F-029 & S6: Export Book Project in Chapter Order & & & & \\ \hline
+REQ-F-030 & AC-F-030 & S11: Server API Resource Management & & & & \\ \hline
+REQ-F-031 & AC-F-031 & S11: Server API Resource Management & & & & \\ \hline
+REQ-F-032 & AC-F-032 & S11: Server API Resource Management & & & & \\ \hline
+REQ-F-033 & AC-F-033 & S11: Server API Resource Management & & & & \\ \hline
+REQ-F-034 & AC-F-034 & S3: Chapter and Book Associations; S4: Symmetric Entry Links; S11: Server API Resource Management & & & & \\ \hline
+REQ-F-035 & AC-F-035 & S7: Offline Use and Persistence; S12: Offline Change Synchronization & & & & \\ \hline
+REQ-F-036 & AC-F-036 & S12: Offline Change Synchronization & & & & \\ \hline
+REQ-F-037 & AC-F-037 & S13: Resolve a Synchronization Conflict & & & & \\ \hline
 REQ-NF-001 & AC-NF-001 & NFR verification: save latency with 1,000-entry SQLite fixture on minimum OS simulator/emulator & & & & \\ \hline
 REQ-NF-002 & AC-NF-002 & NFR verification: search/filter latency with 1,000-entry SQLite fixture on minimum OS simulator/emulator & & & & \\ \hline
 REQ-NF-003 & AC-NF-003 & S7: Offline Use and Persistence & & & & \\ \hline
@@ -76,7 +84,8 @@ REQ-NF-010 & AC-NF-010 & S9: Export Success and Failure & & & & \\ \hline
 REQ-NF-011 & AC-NF-011 & S9: Export Success and Failure & & & & \\ \hline
 REQ-NF-012 & AC-NF-012 & NFR verification: ISO-8601 UTC timestamps and 2 MB FIFO log rotation & & & & \\ \hline
 REQ-NF-013 & AC-NF-013 & NFR verification: confirm no user-facing diagnostic-log UI & & & & \\ \hline
-REQ-NF-014 & AC-NF-014 & NFR verification: TDD evidence and Jest statement/branch coverage thresholds & & & & \\ \hline
+REQ-NF-014 & AC-NF-014 & NFR verification: TDD evidence and Jest statement/branch coverage thresholds for client and backend components & & & & \\ \hline
+REQ-NF-015 & AC-NF-015 & NFR verification: inspect HTTPS transport, JSON payloads, versioned REST paths, HTTP methods, and response status codes & & & & \\ \hline
 \end{longtable}
 
 \end{document}

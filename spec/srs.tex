@@ -20,7 +20,7 @@
 \title{Software Requirements Specification\\[0.4em]
 \large Writer's Creative Ideas Information System}
 \author{Academic / Engineering Project}
-\date{Draft for engineering baseline review\\Version 1.0}
+\date{Draft for engineering baseline review\\Version 2.0}
 
 \begin{document}
 \maketitle
@@ -32,7 +32,7 @@
 Document status & Requirements baseline draft \\
 Methodology & Socratic Knowledge Elicitation \& Documentation (SKED) \\
 Guideline & IEEE 830-style SRS structure \\
-Target product & Offline-first mobile application \\
+Target product & Offline-first mobile client with REST API backend \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -47,9 +47,9 @@ Target product & Offline-first mobile application \\
 This Software Requirements Specification (SRS) defines the agreed scope, externally observable behavior, quality attributes, acceptance criteria, and behavioral scenarios for the Writer's Creative Ideas Information System. It is intended for the project owner, analysts, designers, implementers, testers, and academic reviewers. Requirement identifiers are stable references for specifications, tickets, tests, and implementation traceability.
 
 \subsection{Scope}
-The product is a smartphone application for capturing, organizing, linking, searching, and exporting literary creative material. A user can manage Books and Chapters, create Entries with preset Entry Types and Tags, associate Entries with Books and Chapters, and link Entries to one another. The application is offline-first and stores its working data locally in SQLite.
+The product is an offline-first smartphone client backed by a server application and REST API. Writers can capture, organize, link, search, and export literary creative material. A user can manage Books and Chapters, create Entries with preset Entry Types and Tags, associate Entries with Books and Chapters, and link Entries to one another. The client persists a local working copy in SQLite, supports core workflows without a network connection, and synchronizes changes with the server when connectivity is available.
 
-The MVP is limited to iOS and Android. It does not provide a manuscript editor, web or desktop client, cloud synchronization, authentication, backend service, multi-user collaboration, publishing workflow, or complex project/deadline management. Text export to device-local storage is included.
+The MVP client is limited to iOS and Android. A web client, desktop client, manuscript editor, multi-user collaboration, publishing workflow, and complex project/deadline management are out of scope. Server-backed data access and synchronization are in scope; account and authentication behavior is not specified in this revision. Text export to device-local storage is included.
 
 \subsection{Intended Audience and Reading Guidance}
 Section 2 describes context, users, platform, and constraints. Section 3 contains the normative functional and non-functional requirements. Section 4 defines acceptance evidence for every requirement. Section 5 specifies representative Given--When--Then (GWT) behavioral scenarios. Requirements use the word ``shall'' to indicate a mandatory product obligation.
@@ -68,6 +68,9 @@ Section 2 describes context, users, platform, and constraints. Section 3 contain
   \item[Quick Capture] The workflow for creating an Entry with minimal required input. A General Note can be created with Content only.
   \item[Display Title] The title shown for an Entry. It is the explicit Title when nonblank; otherwise, it is derived from Content under REQ-F-003.
   \item[Book Project Export] A text export of a Book and the Entries associated with it directly or through its Chapters.
+  \item[Pending Change] A locally persisted create, update, or delete that has not yet been acknowledged by the server.
+  \item[Sync Cursor] An opaque server-issued position used by a client to request changes made since its previous synchronization.
+  \item[Sync Conflict] A server-side version conflict in which the same record was changed locally and remotely since the client's last synchronization.
 \end{description}
 
 \subsection{References}
@@ -82,7 +85,7 @@ Identifiers beginning \texttt{REQ-F-} denote functional requirements. Identifier
 \section{Overall Description}
 
 \subsection{Product Perspective}
-The product is a standalone mobile application. Its working dataset resides on the device in an SQLite database accessed through Expo SQLite. There is no server-side system, account service, or cloud synchronization in the MVP. The mobile operating system provides the runtime, accessibility services, and local file handling used for text export.
+The product uses a mobile client and a server application. The client maintains a durable local SQLite working copy via Expo SQLite, communicates with the server through a versioned REST API, and synchronizes pending local changes and server changes when connected. The mobile operating system provides the runtime, accessibility services, and local file handling used for text export. While offline, the client continues to use its local data and queues changes for later synchronization.
 
 \subsection{Product Functions}
 At a high level, the product provides:
@@ -93,12 +96,13 @@ At a high level, the product provides:
   \item automatic parent-Book association for Chapter-associated Entries;
   \item symmetric links between Entries;
   \item case-insensitive full-text search and combined search/type/tag filtering;
-  \item local text export of an Entry or Book project; and
+  \item local text export of an Entry or Book project;
+  \item synchronization of local changes to the server and retrieval of remote changes; and
   \item internal local diagnostic logging without a dedicated user-facing log interface.
 \end{itemize}
 
 \subsection{User Classes and Characteristics}
-The primary user class is an individual writer, novelist, screenwriter, or storyteller who needs to capture ideas on the move and later organize and retrieve a large volume of heterogeneous creative material. The MVP has one local user context per device; account or multi-user behavior is not defined.
+The primary user class is an individual writer, novelist, screenwriter, or storyteller who needs to capture ideas on the move and later organize and retrieve a large volume of heterogeneous creative material. The MVP has one local user context per device; account identity, authentication, and multi-user behavior are not defined.
 
 \subsection{Operating Environment}
 \begin{itemize}
@@ -106,14 +110,16 @@ The primary user class is an individual writer, novelist, screenwriter, or story
   \item Android 10.0 or later (API level 29 or later).
   \item iOS 15.0 or later.
   \item Minimum supported logical viewport: 360 by 640 device-independent pixels (dp).
-  \item On-device SQLite persistence using \texttt{expo-sqlite}.
-  \item Core application workflows must function without network connectivity.
+  \item On-device SQLite persistence using \texttt{expo-sqlite}, with a remote server reachable over HTTPS when connected.
+  \item Core application workflows must function without network connectivity; synchronization requires network connectivity.
 \end{itemize}
 
 \subsection{Design and Implementation Constraints}
 \begin{itemize}
-  \item The MVP is mobile-only; web and desktop implementations are excluded.
-  \item Working data is local. Cloud synchronization, user authentication, and backend services are excluded.
+  \item The MVP client is mobile-only; web and desktop clients are excluded.
+  \item The client shall retain a local working copy; the server is the shared synchronization endpoint when the network is available.
+  \item The REST API transport and payload format shall follow the communications requirements in Section 3.
+  \item Authentication, account lifecycle, and multi-user access control are not specified by this revision.
   \item The Entry Types are a fixed preset set. Flexible categorization is provided by Tags, not user-created Entry Types.
   \item Book and Chapter deletion must not cascade into deletion of Entries.
   \item Entry Links are unlabeled and symmetric.
@@ -137,13 +143,13 @@ In-app help content, onboarding, and end-user documentation are not specified by
 The interface shall be designed for small smartphone screens and quick on-the-go capture. It shall provide workflows to create and manage Entries, Books, Chapters, Tags, and Entry Links; retrieve Entries; and initiate exports. Detailed screen layouts, navigation structure, and visual design are outside this SRS.
 
 \subsubsection{Software Interfaces}
-The application shall use React Native, Expo, TypeScript, and \texttt{expo-sqlite} for local relational persistence. It shall use platform capabilities as needed for local text-file export and accessibility. No remote application programming interface is in scope.
+The mobile client shall use React Native, Expo, TypeScript, and \texttt{expo-sqlite} for local relational persistence. It shall use platform capabilities as needed for local text-file export and accessibility. The client shall communicate with the backend REST API described below.
 
 \subsubsection{Communications Interfaces}
-No network communication is required for MVP behavior. The system shall not depend on a network service for capture, organization, search, or export.
+Client-server communication shall use HTTPS. API requests and responses shall use UTF-8 encoded JSON and RESTful resource semantics. The versioned API base path shall be \texttt{/api/v1}. Resource endpoints shall include \texttt{/entries}, \texttt{/books}, \texttt{/chapters}, \texttt{/tags}, \texttt{/entry-tag-associations}, \texttt{/entry-book-associations}, \texttt{/entry-chapter-associations}, and \texttt{/entry-links}; standard HTTP methods shall be used to create, retrieve, update, and delete resources. Synchronization shall use \texttt{POST /api/v1/sync/push} for client changes and \texttt{GET /api/v1/sync/pull?cursor=\{cursor\}} for server changes. Requests shall be independently processable and responses shall use HTTP status codes to report success, validation errors, and version conflicts. The client shall not require network access for core capture, organization, search, or export workflows.
 
 \subsubsection{Data and Export Interface}
-The local database shall represent Entries, Books, Chapters, Tags, Book Associations, Chapter Associations, Entry Links, and diagnostic events. Export output shall be a \texttt{.txt} file saved to device-local storage. UTF-8 encoding is required. Exact export metadata, punctuation, and file-naming conventions remain unspecified.
+The local database shall represent Entries, Books, Chapters, Tags, Book Associations, Chapter Associations, Entry Links, pending changes, synchronization metadata, and diagnostic events. API resource representations shall identify the resource and its relationships and carry version information needed to detect concurrent changes. Synchronization responses shall identify acknowledged changes, remote changes, deletions, and the next Sync Cursor. Export output shall be a \texttt{.txt} file saved to device-local storage. UTF-8 encoding is required. Exact export metadata, punctuation, and file-naming conventions remain unspecified.
 
 \subsection{Functional Requirements}
 
@@ -227,6 +233,24 @@ REQ-F-028 & A Book Project Export shall include Entries associated directly with
 REQ-F-029 & Each Entry shall appear no more than once in a Book Project Export. An Entry associated with a Chapter and its parent Book shall appear under the Chapter heading and not be duplicated in ``General Book Notes''. \\ \hline
 \end{longtable}
 
+\subsubsection{Backend API and Synchronization}
+\begin{longtable}{|L{2.2cm}|L{13.6cm}|}
+\hline \textbf{ID} & \textbf{Requirement} \\
+\hline
+\endfirsthead
+\hline \textbf{ID} & \textbf{Requirement} \\
+\hline
+\endhead
+REQ-F-030 & The backend API shall allow the client to create, retrieve, update, and delete Entries through the \texttt{/api/v1/entries} resource. Successful changes shall be represented in JSON and assigned a server version. \\ \hline
+REQ-F-031 & The backend API shall allow the client to create, retrieve, update, and delete Books through the \texttt{/api/v1/books} resource. \\ \hline
+REQ-F-032 & The backend API shall allow the client to create, retrieve, update, and delete Chapters through the \texttt{/api/v1/chapters} resource, including their parent-Book relationship. \\ \hline
+REQ-F-033 & The backend API shall allow the client to create, retrieve, update, and delete Tags through the \texttt{/api/v1/tags} resource and to represent Entry-to-Tag assignments. \\ \hline
+REQ-F-034 & The backend API shall allow the client to create, retrieve, and delete Entry-to-Tag Associations, Entry-to-Book Associations, Entry-to-Chapter Associations, and Entry Links through their respective resources. It shall preserve the relationship and deletion behavior in REQ-F-009, REQ-F-016 through REQ-F-021. \\ \hline
+REQ-F-035 & The client shall submit locally queued creates, updates, and deletes to \texttt{POST /api/v1/sync/push} when connected. The server shall acknowledge each accepted change; the client shall retain and retry unacknowledged changes without creating duplicate effects. \\ \hline
+REQ-F-036 & The client shall retrieve server changes from \texttt{GET /api/v1/sync/pull?cursor=\{cursor\}}, apply returned creates, updates, and deletions to its local store, and persist the returned Sync Cursor with the applied changes. Deletions shall be represented so that they are propagated to clients that were offline. \\ \hline
+REQ-F-037 & The server shall detect an update conflict when a client submits a record version older than the current server version. The client shall preserve both the pending local version and the current server version, show the conflict to the user, and allow the user to select which version to retain; the selected resolution shall be submitted as a subsequent change. \\ \hline
+\end{longtable}
+
 \subsection{Non-Functional Requirements}
 \begin{longtable}{|L{2.4cm}|L{13.6cm}|}
 \hline \textbf{ID} & \textbf{Requirement} \\
@@ -237,8 +261,8 @@ REQ-F-029 & Each Entry shall appear no more than once in a Book Project Export. 
 \endhead
 REQ-NF-001 & Under normal operating conditions (a local SQLite database pre-populated with 1,000 Entries running on an iOS 15 or later simulator or an Android 10 or later emulator), the system shall save a new Entry and confirm completion within 1 second. \\ \hline
 REQ-NF-002 & Under normal operating conditions (a local SQLite database pre-populated with 1,000 Entries running on an iOS 15 or later simulator or an Android 10 or later emulator), the system shall return search and filter results within 2 seconds. \\ \hline
-REQ-NF-003 & The system's core capture, organization, search, and export workflows shall operate without an internet connection. \\ \hline
-REQ-NF-004 & The system shall store working data locally on the device in SQLite using \texttt{expo-sqlite}. Persisted data shall remain available after the application is closed and reopened. \\ \hline
+REQ-NF-003 & The system's core capture, organization, search, and export workflows shall operate without an internet connection. Changes made while offline shall be queued for later synchronization. \\ \hline
+REQ-NF-004 & The client shall store a durable working copy locally on the device in SQLite using \texttt{expo-sqlite}. Persisted data and pending changes shall remain available after the application is closed and reopened, whether or not synchronization has completed. \\ \hline
 REQ-NF-005 & The system shall preserve valid relationships among Entries, Books, Chapters, Tags, Book Associations, Chapter Associations, and Entry Links when records or associations are created, edited, detached, or deleted. \\ \hline
 REQ-NF-006 & Deleting a Book or Chapter shall not cause loss of the Content or identity of any associated Entry. \\ \hline
 REQ-NF-007 & The application shall install and operate on Android 10.0 or later (API 29 or later) and iOS 15.0 or later. \\ \hline
@@ -248,7 +272,8 @@ REQ-NF-010 & Exported \texttt{.txt} files shall use UTF-8 encoding and preserve 
 REQ-NF-011 & If an export cannot be completed, the system shall notify the user, shall not report success, and shall not present a partial file as a completed export. \\ \hline
 REQ-NF-012 & The system shall maintain an internal, device-local diagnostic/audit log recording the occurrence and time of Entry, Book, and Chapter creation, update, and deletion; association and Entry Link changes; and export operations. Timestamps shall use ISO-8601 format in UTC. The log shall have a maximum size of 2 MB and shall rotate on a first-in, first-out (FIFO) basis by removing the oldest log records when necessary to remain within the limit. \\ \hline
 REQ-NF-013 & The MVP shall not provide a dedicated user-facing interface for viewing or managing the diagnostic log. \\ \hline
-REQ-NF-014 & The codebase shall be developed using Test-Driven Development (TDD). Domain logic and SQLite repositories shall have automated unit and integration tests with at least 85 percent statement and branch coverage, measured using Jest with \texttt{npm test -- --coverage} (excluding \texttt{*.config.js} and \texttt{*.d.ts}). Additionally, the engineering process shall maintain project logs recording requirement conflict resolution, coding-agent (AI co-pilot) interaction prompts and decisions, and key technical trade-offs alongside technical documentation in the project repository. \\ \hline
+REQ-NF-014 & The codebase shall be developed using Test-Driven Development (TDD). Client domain logic and SQLite repositories, plus backend domain logic, API, and synchronization components, shall have automated unit and integration tests with at least 85 percent statement and branch coverage, measured using Jest with \texttt{npm test -- --coverage} (excluding \texttt{*.config.js} and \texttt{*.d.ts}). Additionally, the engineering process shall maintain project logs recording requirement conflict resolution, coding-agent (AI co-pilot) interaction prompts and decisions, and key technical trade-offs alongside technical documentation in the project repository. \\ \hline
+REQ-NF-015 & Client-server API communication shall use HTTPS and UTF-8 encoded JSON, follow the versioned RESTful resource and synchronization interface in this SRS, and use HTTP status codes to distinguish successful requests, invalid requests, and version conflicts. \\ \hline
 \end{longtable}
 
 \section{Acceptance Criteria}
@@ -291,6 +316,14 @@ AC-F-026 & Export creates a local \texttt{.txt} file containing the Entry's Cont
 AC-F-027 & Export creates a local \texttt{.txt} file for the selected Book project. \\ \hline
 AC-F-028 & The export includes directly associated and Chapter-associated Entries; Chapter entries occur beneath their Chapter headings ordered by ascending internal integer position when available, otherwise by ascending \texttt{created\_at}. Direct Book-level Entries not placed under Chapters occur under ``General Book Notes'' at the end. \\ \hline
 AC-F-029 & An Entry associated with both a Chapter and its parent Book occurs once, under its Chapter heading, and not again in ``General Book Notes''. \\ \hline
+AC-F-030 & API requests create, retrieve, update, and delete an Entry; successful JSON responses include the server version, and deleted Entries are no longer retrievable. \\ \hline
+AC-F-031 & API requests create, retrieve, update, and delete a Book; the resulting state is reflected by subsequent retrieval. \\ \hline
+AC-F-032 & API requests create, retrieve, update, and delete a Chapter and preserve its parent-Book relationship. \\ \hline
+AC-F-033 & API requests create, retrieve, update, and delete a Tag and represent its assignment to an Entry. \\ \hline
+AC-F-034 & API requests create and delete each supported Entry association and link; tests confirm the Chapter-derived Book relationship, direct-association behavior, symmetric links, and no dangling references after deletion. \\ \hline
+AC-F-035 & With connectivity restored, each queued local change is acknowledged and applied once; a failed or unacknowledged change remains queued and can be retried without duplicate records or relationships. \\ \hline
+AC-F-036 & Pulling changes from a saved cursor updates the local store, propagates remote deletions, and advances the cursor only when the changes have been applied and persisted. \\ \hline
+AC-F-037 & Submitting an outdated record version returns a conflict and exposes both local and server versions in the client; the user can select either version, and the selected version is submitted and synchronized. \\ \hline
 \end{longtable}
 
 \subsection{Non-Functional Acceptance Criteria}
@@ -303,8 +336,8 @@ AC-F-029 & An Entry associated with both a Chapter and its parent Book occurs on
 \endhead
 AC-NF-001 & On an iOS 15+ simulator or Android 10+ emulator with a local SQLite database pre-populated with 1,000 Entries, Entry save and success confirmation complete within 1 second. \\ \hline
 AC-NF-002 & On an iOS 15+ simulator or Android 10+ emulator with a local SQLite database pre-populated with 1,000 Entries, search and filter results appear within 2 seconds. \\ \hline
-AC-NF-003 & With network connectivity disabled, capture, organization, search, and export complete using local data. \\ \hline
-AC-NF-004 & Inspection confirms use of the on-device SQLite database via \texttt{expo-sqlite}; saved data remains after closing and reopening the app. \\ \hline
+AC-NF-003 & With network connectivity disabled, capture, organization, search, and export complete using local data; offline changes remain queued after closing and reopening the app. \\ \hline
+AC-NF-004 & Inspection confirms use of the on-device SQLite database via \texttt{expo-sqlite}; saved data and pending changes remain after closing and reopening the app, including before synchronization. \\ \hline
 AC-NF-005 & Tests of create, edit, associate, detach, and delete operations show no dangling references and show only valid remaining relationships. \\ \hline
 AC-NF-006 & After Book or Chapter deletion, associated Entry identity and Content remain retrievable. \\ \hline
 AC-NF-007 & The release application installs and launches on Android API 29+ and iOS 15+. \\ \hline
@@ -314,7 +347,8 @@ AC-NF-010 & Exported files decode as UTF-8 and preserve representative accented 
 AC-NF-011 & A simulated or induced export failure produces an error indication, no success indication, and no partial file reported as complete. \\ \hline
 AC-NF-012 & Inspection confirms that each required event is timestamped in ISO-8601 UTC format and that log rotation retains no more than 2 MB of records by removing the oldest records first. \\ \hline
 AC-NF-013 & The MVP contains no dedicated user-facing screen or controls for viewing or managing diagnostic logs. \\ \hline
-AC-NF-014 & Development evidence demonstrates a tests-first workflow with at least 85 percent statement and branch coverage reported by Jest for domain logic and SQLite repositories. Repository audit also confirms the presence of engineering logs documenting requirement conflict resolution, coding-agent prompts and responses, and architectural decisions. \\ \hline
+AC-NF-014 & Development evidence demonstrates a tests-first workflow with at least 85 percent statement and branch coverage reported by Jest for client domain logic and SQLite repositories, plus backend domain logic, API, and synchronization components. Repository audit also confirms the presence of engineering logs documenting requirement conflict resolution, coding-agent prompts and responses, and architectural decisions. \\ \hline
+AC-NF-015 & Inspection of client-server traffic confirms HTTPS transport, UTF-8 JSON request and response bodies, versioned REST resource and sync paths, use of standard HTTP methods, and distinct status codes for success, invalid requests, and version conflicts. \\ \hline
 \end{longtable}
 
 \section{Behavioral Scenarios (Given--When--Then)}
@@ -378,7 +412,10 @@ The following scenarios are representative acceptance-level examples. They compl
 \textbf{Then} these operations use local data and complete without network access.
 
 \textbf{When} the user closes and reopens the app while still offline\\
-\textbf{Then} the Entry and its saved Content remain available.
+\textbf{Then} the Entry and its saved Content remain available and its changes remain queued for synchronization.
+
+\textbf{When} network connectivity is restored\\
+\textbf{Then} the queued changes are synchronized with the server without requiring the user to recreate the Entry.
 
 \subsection*{Scenario 8: Create and Structure a General Note}
 \textbf{Given} the user has an idea to capture\\
@@ -404,14 +441,35 @@ The following scenarios are representative acceptance-level examples. They compl
 \textbf{And} no active Entry Link points to the deleted Entry\\
 \textbf{And} the other linked Entry remains available.
 
+\subsection*{Scenario 11: Server API Resource Management}
+\textbf{Given} the client is connected to the backend API\\
+\textbf{When} the client creates, retrieves, updates, and deletes Entries, Books, Chapters, and Tags using their API resources\\
+\textbf{Then} each successful operation returns or reflects the expected JSON resource state\\
+\textbf{And} creating or removing associations and Entry Links through their resources preserves the relationship rules and leaves no dangling references.
+
+\subsection*{Scenario 12: Offline Change Synchronization}
+\textbf{Given} the client has queued local creates, updates, and deletions while offline\\
+\textbf{When} connectivity is restored and the client pushes its pending changes and pulls server changes from its saved Sync Cursor\\
+\textbf{Then} acknowledged local changes are applied once and remote changes, including deletions, are applied to the local store\\
+\textbf{And} unacknowledged changes remain queued for retry\\
+\textbf{And} the new Sync Cursor is persisted with the applied changes.
+
+\subsection*{Scenario 13: Resolve a Synchronization Conflict}
+\textbf{Given} a record was changed both locally and on the server since the client's last synchronization\\
+\textbf{When} the client submits its outdated version\\
+\textbf{Then} the server reports a version conflict and the client preserves and displays both versions\\
+\textbf{When} the user selects which version to retain\\
+\textbf{Then} the selected version is submitted as a new change and synchronized.
+
 \section{Traceability and Outstanding Specification Details}
-The acceptance criteria are keyed directly to requirement identifiers. Functional criteria \texttt{AC-F-001} through \texttt{AC-F-029} map one-to-one to \texttt{REQ-F-001} through \texttt{REQ-F-029}; non-functional criteria \texttt{AC-NF-001} through \texttt{AC-NF-014} map one-to-one to \texttt{REQ-NF-001} through \texttt{REQ-NF-014}. The GWT scenarios exercise key cross-requirement workflows and cite the same observable behavior.
+The acceptance criteria are keyed directly to requirement identifiers. Functional criteria \texttt{AC-F-001} through \texttt{AC-F-037} map one-to-one to \texttt{REQ-F-001} through \texttt{REQ-F-037}; non-functional criteria \texttt{AC-NF-001} through \texttt{AC-NF-015} map one-to-one to \texttt{REQ-NF-001} through \texttt{REQ-NF-015}. The GWT scenarios exercise key cross-requirement workflows and cite the same observable behavior. The accompanying RTM maps each requirement to its acceptance criterion and relevant scenario or verification evidence.
 
 The following details were not decided during SKED and must be specified in the design, verification plan, or a later SRS revision before their related checks can be fully reproducible:
 \begin{itemize}
   \item whether users can manually reorder Chapters, beyond the export ordering rule specified in REQ-F-028;
   \item exact text layout, metadata, file naming, and platform destination-selection behavior for exports;
-  \item diagnostic-log redaction and timestamp precision; and
+  \item diagnostic-log redaction and timestamp precision;
+  \item account identity, authentication, and authorization behavior, which are outside this revision's specified scope; and
   \item the precise definition of domain logic and repository code included in the REQ-NF-014 coverage scope.
 \end{itemize}
 

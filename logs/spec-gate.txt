@@ -7,3 +7,28 @@ The following tasks were completed:
 - The specification contains functional and non-functional requirements with identifiers and priorities, acceptance criteria, BDD scenarios for key behavioral requirements, and a fully populated traceability matrix;
 - Executed a quality audit of the specification that identified and resolved key defects: subjective formulations ("meaningful labels", "normal operating conditions"), unclear Jest coverage configuration (>= 85%), undefined log rotation parameters (ISO-8601 UTC, 2 MB FIFO), the Display Title generation rule (25 characters + ...), Chapter sorting order, and missing entries in the traceability matrix;
 - Established strict AND logic for multi-filters.
+
+SPEC-GATE UPDATE: Client-server architecture revision (2026-10-16)
+
+The SRS and Requirements Traceability Matrix were revised to replace the
+standalone, offline-only architecture baseline with an offline-first mobile
+client backed by a REST API server. This revision supersedes the original
+exclusion of backend services and cloud synchronization. The mobile MVP scope
+remains iOS and Android; web and desktop clients remain excluded.
+
+The updated specification now defines:
+- HTTPS transport, UTF-8 JSON, versioned REST resource paths, and HTTP status
+  behavior for success, validation errors, and version conflicts;
+- backend CRUD requirements for Entries, Books, Chapters, Tags, and their
+  associations and links;
+- queued offline changes, push/pull synchronization, acknowledgements,
+  retry-safe application, server-issued sync cursors, and deletion propagation;
+- conflict detection that preserves local and server versions for explicit
+  user resolution; and
+- revised acceptance criteria, behavioral scenarios, and RTM mappings.
+
+Requirements retain only REQ-F- and REQ-NF- identifiers. The revised SRS
+contains 37 functional and 15 non-functional requirements, each with a matching
+acceptance criterion and RTM row. Both LaTeX sources compiled successfully and
+the corresponding spec/srs.pdf and spec/traceability-matrix.pdf were rebuilt.
+Identifier and traceability checks passed; no REQ-API- identifiers were added.
