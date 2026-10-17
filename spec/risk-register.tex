@@ -1,0 +1,203 @@
+\documentclass[10pt,a4paper]{article}
+
+\usepackage[landscape,a4paper,margin=1.2cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage[hidelinks]{hyperref}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.45em}
+\renewcommand{\arraystretch}{1.15}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+
+\title{Project Risk Register\\[0.3em]
+\large Writer's Creative Ideas Information System}
+\author{WNT Project Plan}
+\date{17 October 2026}
+
+\begin{document}
+\maketitle
+
+\textbf{Purpose.} This register identifies proposed project, technical, schedule,
+and coding-agent risks relevant to the approved SRS and WNT ticket plan. Ratings
+are preliminary inherent priorities before mitigation: Critical, High, or
+Medium. Reassess likelihood and impact as implementation evidence becomes
+available. Requirement identifiers follow the SRS; it defines \texttt{REQ-F-*}
+and \texttt{REQ-NF-*} identifiers.
+
+\small
+\begin{longtable}{|L{1.15cm}|L{3.1cm}|L{5.6cm}|L{4.4cm}|L{7.1cm}|}
+\hline
+\textbf{ID / Priority} & \textbf{Risk and relevant requirements} &
+\textbf{Manifestation and potential consequences} & \textbf{Detection} &
+\textbf{Prevention / mitigation} \\
+\hline
+\endfirsthead
+\hline
+\textbf{ID / Priority} & \textbf{Risk and relevant requirements} &
+\textbf{Manifestation and potential consequences} & \textbf{Detection} &
+\textbf{Prevention / mitigation} \\
+\hline
+\endhead
+
+R-01 / High &
+AI misinterprets requirements. \texttt{REQ-F-003}, \texttt{REQ-F-016}--\texttt{REQ-F-018}, \texttt{REQ-F-024}--\texttt{REQ-F-025}, \texttt{REQ-F-028}--\texttt{REQ-F-029}, \texttt{REQ-F-035}--\texttt{REQ-F-037}. &
+The agent implements plausible but incorrect behavior, such as treating a Chapter-derived Book association as direct, using OR rather than strict AND filtering, or duplicating an Entry in export. This can cause incorrect results, data-integrity defects, and loss of user trust. &
+Review requirement-to-ticket-to-test traceability; exercise edge cases in acceptance tests; have a human compare observable behavior with the SRS. &
+Include SRS IDs and acceptance criteria in ticket prompts. Require tests before code. Ask the agent to state its interpretation for ambiguous rules; the human resolves interpretation rather than the agent inventing behavior. \\
+\hline
+
+R-02 / High &
+AI output is non-deterministic. All implementation requirements; \texttt{REQ-NF-014}. &
+Repeated agent runs produce different designs or code, introduce regressions, or make reviewed implementation diverge from its evidence. &
+Review diffs; rerun regression tests; compare changes with the approved contract and ticket scope. &
+Keep changes small and version-controlled. Pin dependencies and tool configuration. Require human review before merging material changes; do not treat a successful earlier run as evidence for a later change. \\
+\hline
+
+R-03 / High &
+Code and tests share the same mistaken assumptions. \texttt{REQ-NF-014}; especially persistence, relationships, filters, export, and sync. &
+The agent writes tests and implementation from the same misunderstanding. Tests pass, but required behavior is wrong; a coverage threshold may be met without requirement coverage. &
+Have humans independently review test intent and expected outcomes. Walk scenarios against the SRS. Inspect boundary and failure cases, not only coverage percentages. &
+Use WNT-05 test-first workflow, but do not equate TDD with independent verification. For high-risk behavior, the human defines or reviews expected results before implementation. Include integration and end-to-end tests. \\
+\hline
+
+R-04 / High &
+Context loss or stale context causes inconsistent work. Cross-cutting SRS requirements and WNT-01--WNT-17. &
+The agent uses an obsolete SRS interpretation, overlooks an approved addendum, or implements against stale interfaces, causing client/server mismatch and rework. &
+Before each ticket, check assumptions against the current SRS, approved addenda, decisions, and dependencies. Inspect changes and ticket history after context switches. &
+Maintain one approved source of truth. Put requirement IDs, dependencies, and decisions in tickets. Use bounded implementation batches and explicit handoffs. Reconfirm assumptions after context switches and before parallel work. \\
+\hline
+
+R-05 / Medium &
+Tool-use errors damage or misrepresent work. All implementation and evidence tickets. &
+The agent edits the wrong file, runs the wrong command, overwrites changes, misreads test output, or reports success without valid evidence. &
+Inspect target paths and diffs; check command exit codes and generated artifacts; rerun targeted tests and formatting checks. &
+Use scoped commands and edits; avoid destructive operations; inspect the worktree before changes; verify outputs independently. Treat tool output, not an agent summary, as evidence. \\
+\hline
+
+R-06 / High &
+Insufficient human oversight of critical decisions. WNT-03, WNT-04, WNT-13, WNT-14, WNT-17 and high-impact requirements listed below. &
+An incomplete or incorrect agent recommendation is accepted without meaningful human review, approving unsafe design, invalid verification, or an unready release. &
+Confirm a named human reviewer examined the evidence and recorded a decision. Check that Gate criteria are evidenced rather than inferred from ticket status. &
+Preserve human-only authority for specification validation, implementation verification, and all GO/NO-GO decisions. Require rationale and evidence for each GO; record NO-GO when critical criteria are unverified. The agent prepares evidence but does not decide for the human. \\
+\hline
+
+R-07 / High &
+Data loss or corruption in local persistence and relationships. \texttt{REQ-F-006}--\texttt{REQ-F-018}, \texttt{REQ-NF-004}--\texttt{REQ-NF-006}. &
+A migration, delete, detach, or association defect loses Entry content or identity, creates dangling references, or leaves incorrect Book/Chapter relationships. &
+Run persistence/reopen and migration tests; verify relationship integrity; exercise create, edit, detach, and delete scenarios, including independent direct Book associations. &
+Use transactional persistence where appropriate, explicit relationship semantics, migration tests, and repeatable test fixtures. Independently review deletion and detach behavior. Any content-loss or dangling-reference failure blocks Gate~2. \\
+\hline
+
+R-08 / Critical &
+Sync retries, cursors, deletions, or conflicts lose or duplicate changes. \texttt{REQ-F-035}--\texttt{REQ-F-037}, \texttt{REQ-NF-003}--\texttt{REQ-NF-005}, \texttt{REQ-NF-015}. &
+Retries duplicate changes; a cursor advances before local application is durable; remote deletion is missed; or conflict resolution silently overwrites a version. User content may be lost or client/server state may diverge. &
+Integration-test duplicate delivery, interrupted push/pull, retries, deletion tombstones, stale versions, app restart, and cursor persistence. Verify both versions remain available before resolution. &
+Approve the API/sync contract before implementation. Make change application idempotent; persist cursor atomically with applied changes; retain both versions until explicit user choice. Human-review conflict and deletion test cases. Silent overwrite or lost change blocks Gate~2 and Gate~3. \\
+\hline
+
+R-09 / High &
+Parallel implementation causes interface conflicts or integration rework. \texttt{REQ-F-006}--\texttt{REQ-F-025}, \texttt{REQ-F-030}--\texttt{REQ-F-037}; WNT-08--WNT-12. &
+Concurrent work changes shared models or assumptions independently. Tickets pass local tests but fail after integration. &
+Run integration builds and tests; review shared interfaces; inspect merged changes for duplicated or inconsistent behavior. &
+Agree model and API interfaces before parallel work. Isolate workstreams where possible and integrate continuously. Start WNT-08, WNT-09, and WNT-10 in parallel only after shared model assumptions are stable and export decisions are approved. Reserve integration time. \\
+\hline
+
+R-10 / High &
+Human review and Gate availability delay the schedule. WNT-01--WNT-04, WNT-13--WNT-14, WNT-17. &
+Reviews queue or discover issues late; a Gate decision is unavailable when needed. Technical work may finish while dependent work remains blocked. &
+Track review lead time, pending decisions, and unresolved findings separately from coding status. &
+Book review and Gate slots in advance; provide concise evidence packages; agree response targets. Do not start dependent work before required approval. Keep schedule reserve; do not bypass review to recover schedule. \\
+\hline
+
+R-11 / High &
+November 30 target is infeasible under actual capacity or estimates. All WNT tickets, especially WNT-11--WNT-15. &
+The accelerated plan assumes parallel capacity, compressed API/sync estimates, and timely human responses. If these assumptions fail, implementation, verification, or release readiness slips. &
+Forecast weekly using remaining effort, actual resource availability, review queues, dependency status, integration effort, and defect rework. &
+Confirm named people/agents and availability for parallel streams. Validate WNT-11/WNT-12 estimates early. Protect verification and Gate time; escalate forecast slippage rather than weakening acceptance criteria. \\
+\hline
+
+R-12 / Medium &
+Technology/platform behavior differs from assumptions. \texttt{REQ-NF-001}--\texttt{REQ-NF-010}, \texttt{REQ-NF-015}. &
+Expo SQLite, file export, text scaling, or platform APIs behave differently across supported Android/iOS versions, causing performance, persistence, accessibility, or export failures. &
+Test on minimum supported OS simulator/emulator and device-local export paths. Run the specified 1,000-Entry performance fixtures. &
+Validate platform assumptions early. Keep platform-specific behavior behind tested interfaces. Test release-critical workflows on both supported platforms, not only in mocks or desktop environments. \\
+\hline
+
+R-13 / Medium &
+Coverage target is mistaken for adequate quality. \texttt{REQ-NF-014}. &
+The 85\% statement and branch coverage target is met while critical requirements or failure paths remain untested. &
+Review coverage by component and requirement traceability; inspect uncovered branches and acceptance scenarios. &
+Require both the numeric threshold and mapped acceptance evidence. Review exclusions. Add failure-path and boundary tests for persistence, export, API validation, retries, cursor updates, and conflict resolution. \\
+\hline
+
+R-14 / Medium &
+API transport/status behavior does not match the specified contract. \texttt{REQ-F-030}--\texttt{REQ-F-037}, \texttt{REQ-NF-015}. &
+Client and server disagree on versions, validation errors, conflicts, JSON representations, or HTTPS behavior, preventing correct sync or producing inconsistent state. &
+Use client/server contract tests. Inspect HTTPS and request/response examples. Test successful, invalid, and version-conflict responses. &
+Approve the API/sync contract at Gate~1. Use shared schemas or contract tests. Do not let client and server independently infer undocumented payload behavior. \\
+\hline
+\end{longtable}
+
+\section{Requirements Requiring Enhanced Control}
+\label{sec:controls}
+
+These requirements have a higher cost of failure because errors can destroy or
+misrepresent user-created content, prevent recovery to a consistent state, or
+make release evidence unreliable. The additional controls below are proposed
+acceptance and Gate conditions; they do not change the SRS requirements.
+
+\small
+\begin{longtable}{|L{4.0cm}|L{7.0cm}|L{11.5cm}|}
+\hline
+\textbf{Control priority and requirements} & \textbf{Additional checks} &
+\textbf{Gate / release condition} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Control priority and requirements} & \textbf{Additional checks} &
+\textbf{Gate / release condition} \\
+\hline
+\endhead
+
+Critical: \texttt{REQ-F-006}--\texttt{REQ-F-018}; \texttt{REQ-NF-004}--\texttt{REQ-NF-006}. &
+Persistence/reopen and migration tests; Book/Chapter deletion; Chapter detach with both derived and independent direct Book associations. &
+Human reviews data-integrity evidence at WNT-13. Any content loss or dangling reference is NO-GO at WNT-14. \\
+\hline
+
+Critical: \texttt{REQ-F-035}--\texttt{REQ-F-037}; \texttt{REQ-NF-003}--\texttt{REQ-NF-005}, \texttt{REQ-NF-015}. &
+Integration tests for retries, duplicate delivery, interrupted operations, deletion propagation, cursor persistence, and conflict preservation. Verify both versions survive until explicit resolution. &
+Human reviews sync evidence. Any silent overwrite or lost change is NO-GO at WNT-14 and WNT-17. \\
+\hline
+
+High: \texttt{REQ-F-030}--\texttt{REQ-F-037}; \texttt{REQ-NF-015}. &
+Gate~1 contract approval; contract tests for success, invalid request, and version conflict; verify resource versions and synchronization representations. &
+WNT-04 must approve the contract before implementation. Human verification checks client/server agreement before Gate~2. \\
+\hline
+
+High: \texttt{REQ-F-026}--\texttt{REQ-F-029}; \texttt{REQ-NF-010}--\texttt{REQ-NF-011}. &
+Approve open export decisions in WNT-02. Test Chapter ordering, no duplicates, UTF-8 representative text, and induced failure; verify partial output is not reported as success. &
+WNT-10 must match approved clarifications. Export acceptance evidence is reviewed before Gate~2 and Gate~3. \\
+\hline
+
+High: \texttt{REQ-NF-001}--\texttt{REQ-NF-004}, \texttt{REQ-NF-007}. &
+Run save/search performance, restart/offline persistence, and supported-platform checks under the SRS-specified conditions. &
+Record results in WNT-13 and WNT-15. Failed mandatory thresholds prevent a GO until resolved or formally dispositioned through approved requirements governance. \\
+\hline
+
+Release-critical: \texttt{REQ-NF-014} and all acceptance criteria. &
+Review requirement-linked test results, failure-path evidence, coverage configuration and report, and unresolved defects. Coverage alone is not sufficient. &
+Human alone records GO at WNT-17. The agent may prepare evidence but cannot authorize release. \\
+\hline
+\end{longtable}
+
+\textbf{Scope note.} Authentication and account behavior are not specified in
+this SRS revision and are therefore not treated as implementation requirements
+or assumed controls here. If authentication or authorization is needed, it
+requires an explicit scope and specification decision before implementation.
+
+\end{document}

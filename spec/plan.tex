@@ -1,0 +1,47 @@
+\documentclass[11pt, a4paper]{article}
+\usepackage[a4paper, margin=2.5cm]{geometry}
+\usepackage{fontspec}
+\usepackage[english, bidi=basic, provide=*]{babel}
+\babelprovide[import, onchar=ids fonts]{english}
+\babelfont{rm}{Noto Sans}
+\usepackage{booktabs}
+\usepackage{caption}
+
+\captionsetup[table]{skip=8pt}
+
+\begin{document}
+
+\section*{WNT Project Task Schedule}
+
+Below is the final schedule of tasks from October 17 to November 30, 2026, including durations and exact calendar periods for each ticket.
+
+\begin{table}[htbp]
+\centering
+\caption{WNT Project Execution Schedule}
+\label{tab:wnt_schedule}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Ticket / Task} & \textbf{Duration (days)} & \textbf{Execution Period} \\
+\midrule
+WNT-01 -- API-sync contract & 2 & 17.10 -- 18.10 \\
+WNT-02 -- Export addendum & 2 & 17.10 -- 18.10 \\
+WNT-03 -- Specification validation & 2 & 19.10 -- 20.10 \\
+WNT-04 -- Gate 1 & 1 & 21.10 -- 21.10 \\
+WNT-05 -- TDD setup & 1 & 22.10 -- 22.10 \\
+WNT-06 -- Offline note capture & 5 & 23.10 -- 27.10 \\
+WNT-07 -- Books, chapters and tags & 4 & 28.10 -- 31.10 \\
+WNT-08 -- Note links and safe detach & 3 & 01.11 -- 03.11 \\
+WNT-09 -- Search and filters & 5 & 01.11 -- 05.11 \\
+WNT-10 -- Export & 3 & 01.11 -- 03.11 \\
+WNT-11 -- REST resources & 5 & 04.11 -- 08.11 \\
+WNT-12 -- Sync and conflicts & 8 & 09.11 -- 16.11 \\
+WNT-13 -- Implementation verification & 6 & 17.11 -- 22.11 \\
+WNT-14 -- Gate 2 & 2 & 23.11 -- 24.11 \\
+WNT-15 -- Acceptance test execution & 4 & 25.11 -- 28.11 \\
+WNT-16 -- Engineering documentation & 2 & 23.11 -- 24.11 \\
+WNT-17 -- Gate 3, human decision & 2 & 29.11 -- 30.11 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\end{document}
