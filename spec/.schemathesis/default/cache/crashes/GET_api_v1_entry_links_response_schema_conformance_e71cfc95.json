@@ -1,0 +1,111 @@
+{
+  "operation": "GET /api/v1/entry-links",
+  "method": "GET",
+  "path_template": "/api/v1/entry-links",
+  "fingerprint": "e71cfc95",
+  "case_id": "AFHuXL",
+  "code_sample": "curl -X GET -H 'Authorization: [Filtered]' 'http://127.0.0.1:4010/api/v1/entry-links?entryId=string&cursor=0'",
+  "sequence": [
+    {
+      "method": "GET",
+      "url": "http://127.0.0.1:4010/api/v1/entry-links?entryId=string&cursor=0",
+      "url_template": "http://127.0.0.1:4010/api/v1/entry-links",
+      "headers": {
+        "User-Agent": "schemathesis/4.32.7",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Accept": "*/*",
+        "Connection": "keep-alive",
+        "Authorization": "[Filtered]",
+        "X-Schemathesis-TestCaseId": "AFHuXL"
+      },
+      "response": {
+        "status_code": 200,
+        "headers": {
+          "access-control-allow-origin": "*",
+          "access-control-allow-headers": "*",
+          "access-control-allow-credentials": "[Filtered]",
+          "access-control-expose-headers": "*",
+          "sl-violations": "[{\"location\":[\"response\",\"body\",\"items\",\"0\",\"entryIds\"],\"severity\":\"Error\",\"code\":\"uniqueItems\",\"message\":\"Response body property items.0.entryIds must NOT have duplicate items (items ## 1 and 0 are identical)\"}]",
+          "content-type": "application/json",
+          "content-length": "80",
+          "date": "Thu, 29 Oct 2026 20:24:58 GMT",
+          "connection": "keep-alive",
+          "keep-alive": "timeout=5"
+        },
+        "body": "{\"items\":[{\"id\":\"string\",\"entryIds\":[\"string\",\"string\"]}],\"nextCursor\":\"string\"}"
+      },
+      "link": null,
+      "checks": [
+        {
+          "name": "response_schema_conformance",
+          "status": "failure",
+          "message": "Response violates schema\n\n[\"string\",\"string\"] has non-unique elements\n\nValidated against the response schema for status code 200.\n\nSchema at /components/schemas/EntryLink/properties/entryIds:\n\n    {\n        \"uniqueItems\": true,\n        \"type\": \"array\",\n        \"minItems\": 2,\n        \"maxItems\": 2,\n        \"items\": {\n            \"type\": \"string\",\n            \"minLength\": 1\n        }\n    }\n\nValue:\n\n    [\n        \"string\",\n        \"string\"\n    ]"
+        }
+      ],
+      "meta": {
+        "generation": {
+          "time": 8.499948307871819e-06,
+          "mode": "positive"
+        },
+        "components": {
+          "HEADER": "positive",
+          "QUERY": "positive"
+        },
+        "phase": {
+          "name": "coverage",
+          "data": {
+            "type": "CoveragePhaseData",
+            "description": "All required and 2 optional properties",
+            "location": null,
+            "parameter": null,
+            "parameter_location": "QUERY",
+            "scenario": "object_required_and_optional"
+          }
+        },
+        "pool_draws": [
+          {
+            "location": "query",
+            "parameter_name": "entryId",
+            "resource_name": "Entry",
+            "resource_field": "id",
+            "source_operation": "POST /api/v1/entries",
+            "source_status": 201,
+            "source_identity": null,
+            "source_input": false,
+            "source_query": null
+          }
+        ],
+        "pool_misses": [],
+        "semantic_draws": [],
+        "dictionary_draws": [],
+        "constants_draws": [],
+        "raw_containers": {
+          "HEADER": {
+            "Authorization": "Bearer "
+          },
+          "QUERY": {
+            "entryId": "string",
+            "cursor": "0"
+          }
+        }
+      },
+      "path": "/api/v1/entry-links",
+      "path_parameters": {},
+      "query": {
+        "entryId": "string",
+        "cursor": "0"
+      },
+      "case_headers": {
+        "Authorization": "[Filtered]"
+      },
+      "cookies": {},
+      "case_body": {
+        "encoding": "none"
+      },
+      "media_type": null,
+      "parent_index": null,
+      "auth_identity": null,
+      "operation": "GET /api/v1/entry-links"
+    }
+  ]
+}
