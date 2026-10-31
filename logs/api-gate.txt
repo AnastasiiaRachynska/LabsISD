@@ -1,0 +1,48 @@
+API-GATE DECISION LOG
+
+Review date: 2026-10-30
+Decision: Accepted with qualifications.
+Scope: Review of the REST API contract and stateful mock against the 10 API-GATE criteria.
+
+Criterion decisions
+
+1. REQ-ID traceability — MET.
+   All 42 OpenAPI operations have REQ-ID mappings.
+
+2. Domain resources and terminology — MET.
+   Contract resources and terminology align with the SRS and glossary. The nested
+   Book/Chapter URI hierarchy is clarified by Addendum 01.
+
+3. URI and HTTP-method consistency — MET.
+   Resource and synchronization paths use consistent REST methods and versioned
+   /api/v1 paths.
+
+4. Request and response schemas — MET.
+   Write operations define request schemas, and successful responses define
+   response schemas except for bodyless 204 responses.
+
+5. HTTP status codes and unified error model — MET.
+   Error responses use the shared application/problem+json model and relevant
+   HTTP status codes.
+
+6. Positive and negative scenarios — MET.
+   The contract, SRS scenarios, and checks cover positive resource workflows and
+   negative validation, authorization, precondition, and conflict cases.
+
+7. Avoid unnecessary internal-detail exposure — MET.
+   The mock omits ownerId from public resource responses and derives ownership
+   from the authenticated user. 
+
+8. Automated OpenAPI validation — MET.
+   Redocly validation completed successfully.
+
+9. Mock runs against the approved specification — MET.
+   The stateful in-memory mock starts and supports contract scenarios, but it is
+   hand-coded rather than generated from the OpenAPI document. Contract and mock
+   changes therefore require coordinated maintenance.
+
+10. Key positive and negative scenarios reproducible via mock — MET.
+    All 27 manually exercised representative checks passed. Schemathesis reported
+    42/42 coverage operations passed, 42/42 fuzzing operations passed, 73 stateful
+    checks passed, and 4,032 generated cases passed. These results demonstrate key scenarios.
+
