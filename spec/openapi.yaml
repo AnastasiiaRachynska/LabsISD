@@ -1,0 +1,2515 @@
+openapi: 3.1.0
+info:
+  title: Writer's Creative Ideas Information System API
+  version: 1.0.0
+  summary: REST API for managing creative writing resources and synchronization.
+  description: |
+    OpenAPI contract for functional requirements REQ-F-030 through REQ-F-039.
+    Chapter paths follow Addendum 01 and are nested below their parent Book.
+    Authentication and user-scoped isolation follow Addendum 02.
+
+    Protected resource, relationship, profile, and sync operations require a
+    valid bearer access token. The server derives ownership from the verified
+    JWT subject (userId); clients must not supply userId to select ownership.
+    Data, relationships, sync changes, acknowledgements, and cursors are
+    isolated to the authenticated user. Cross-user access returns 403.
+
+    API contract rules, including pagination, conditional updates, idempotent
+    synchronization, cursor expiry, and Tag deletion effects, are defined by
+    the relevant operation descriptions, parameters, schemas, and responses below.
+  contact:
+    name: Project API maintainers
+  x-requirement-ids:
+    - REQ-F-030
+    - REQ-F-031
+    - REQ-F-032
+    - REQ-F-033
+    - REQ-F-034
+    - REQ-F-035
+    - REQ-F-036
+    - REQ-F-037
+    - REQ-F-038
+    - REQ-F-039
+servers:
+  - url: /
+    description: Host-relative base path; each operation path includes the /api/v1 prefix.
+tags:
+  - name: Authentication
+    description: Registration, login, token refresh, and current-user profile.
+  - name: Entries
+    description: Creative idea entries.
+  - name: Books
+    description: Writer's book projects.
+  - name: Chapters
+    description: Chapters nested under a parent Book (Addendum 01).
+  - name: Tags
+    description: User-defined labels for Entries.
+  - name: Associations
+    description: Relationships between Entries and domain resources.
+  - name: Entry Links
+    description: Unlabeled symmetric relationships between Entries.
+  - name: Synchronization
+    description: User-scoped offline change push and pull.
+security:
+  - bearerAuth: []
+
+paths:
+  /api/v1/auth/register:
+    post:
+      operationId: registerAccount
+      tags: [Authentication]
+      summary: Register an account
+      description: Creates an account using email and password. Does not log in the user.
+      x-requirement-ids: [REQ-F-038]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Account created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisteredUser'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Email is already registered.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                type: about:blank
+                title: Conflict
+                status: 409
+                code: EMAIL_ALREADY_REGISTERED
+                detail: An account with this email address already exists.
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /api/v1/auth/login:
+    post:
+      operationId: login
+      tags: [Authentication]
+      summary: Authenticate and obtain tokens
+      description: Authenticates email and password and returns an access token and refresh token.
+      x-requirement-ids: [REQ-F-038]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Authentication succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /api/v1/auth/refresh:
+    post:
+      operationId: refreshTokens
+      tags: [Authentication]
+      summary: Refresh authentication tokens
+      description: Exchanges a valid refresh token for a new access token and refresh token.
+      x-requirement-ids: [REQ-F-038]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: Tokens refreshed; a new refresh token is issued.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /api/v1/auth/me:
+    get:
+      operationId: getCurrentUser
+      tags: [Authentication]
+      summary: Get the authenticated user's profile
+      x-requirement-ids: [REQ-F-038, REQ-F-039]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current user's profile.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /api/v1/entries:
+    get:
+      operationId: listEntries
+      tags: [Entries]
+      summary: List Entries owned by the authenticated user
+      x-requirement-ids: [REQ-F-030, REQ-F-039]
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/PageCursor'
+      responses:
+        '200':
+          description: A page of Entries.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntryCollection'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    post:
+      operationId: createEntry
+      tags: [Entries]
+      summary: Create an Entry
+      x-requirement-ids: [REQ-F-030, REQ-F-039]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EntryWrite'
+      responses:
+        '201':
+          description: Entry created.
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Entry'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /api/v1/entries/{entryId}:
+    parameters:
+      - $ref: '#/components/parameters/EntryId'
+    get:
+      operationId: getEntry
+      tags: [Entries]
+      summary: Retrieve an Entry
+      x-requirement-ids: [REQ-F-030, REQ-F-039]
+      responses:
+        '200':
+          description: Entry representation.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Entry'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    put:
+      operationId: replaceEntry
+      tags: [Entries]
+      summary: Replace an Entry
+      x-requirement-ids: [REQ-F-030, REQ-F-037, REQ-F-039]
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EntryWrite'
+      responses:
+        '200':
+          description: Entry replaced.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Entry'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    patch:
+      operationId: updateEntry
+      tags: [Entries]
+      summary: Partially update an Entry
+      x-requirement-ids: [REQ-F-030, REQ-F-037, REQ-F-039]
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EntryPatch'
+      responses:
+        '200':
+          description: Entry updated.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Entry'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    delete:
+      operationId: deleteEntry
+      tags: [Entries]
+      summary: Delete an Entry
+      description: Deletion also removes active Entry Links to the Entry.
+      x-requirement-ids: [REQ-F-030, REQ-F-034, REQ-F-039]
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '204':
+          description: Entry deleted; response body is empty.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /api/v1/books:
+    get:
+      operationId: listBooks
+      tags: [Books]
+      summary: List Books owned by the authenticated user
+      x-requirement-ids: [REQ-F-031, REQ-F-039]
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/PageCursor'
+      responses:
+        '200':
+          description: A page of Books.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookCollection'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    post:
+      operationId: createBook
+      tags: [Books]
+      summary: Create a Book
+      x-requirement-ids: [REQ-F-031, REQ-F-039]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookWrite'
+      responses:
+        '201':
+          description: Book created.
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Book'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /api/v1/books/{bookId}:
+    parameters:
+      - $ref: '#/components/parameters/BookId'
+    get:
+      operationId: getBook
+      tags: [Books]
+      summary: Retrieve a Book
+      x-requirement-ids: [REQ-F-031, REQ-F-039]
+      responses:
+        '200':
+          description: Book representation.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Book'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    put:
+      operationId: replaceBook
+      tags: [Books]
+      summary: Replace a Book
+      x-requirement-ids: [REQ-F-031, REQ-F-037, REQ-F-039]
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookWrite'
+      responses:
+        '200':
+          description: Book replaced.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Book'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    patch:
+      operationId: updateBook
+      tags: [Books]
+      summary: Partially update a Book
+      x-requirement-ids: [REQ-F-031, REQ-F-037, REQ-F-039]
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookPatch'
+      responses:
+        '200':
+          description: Book updated.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Book'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    delete:
+      operationId: deleteBook
+      tags: [Books]
+      summary: Delete a Book
+      description: Associated Entries are retained; associations to the deleted Book are removed.
+      x-requirement-ids: [REQ-F-031, REQ-F-034, REQ-F-039]
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '204':
+          description: Book deleted; response body is empty.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /api/v1/books/{bookId}/chapters:
+    parameters:
+      - $ref: '#/components/parameters/BookId'
+    get:
+      operationId: listBookChapters
+      tags: [Chapters]
+      summary: List Chapters under a Book
+      description: The nested URI is required by Addendum 01; the flat /chapters route is superseded.
+      x-requirement-ids: [REQ-F-032, REQ-F-039]
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/PageCursor'
+      responses:
+        '200':
+          description: A page of Chapters belonging to the Book.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChapterCollection'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    post:
+      operationId: createBookChapter
+      tags: [Chapters]
+      summary: Create a Chapter under a Book
+      x-requirement-ids: [REQ-F-032, REQ-F-039]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChapterWrite'
+      responses:
+        '201':
+          description: Chapter created under the identified Book.
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Chapter'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /api/v1/books/{bookId}/chapters/{chapterId}:
+    parameters:
+      - $ref: '#/components/parameters/BookId'
+      - $ref: '#/components/parameters/ChapterId'
+    get:
+      operationId: getBookChapter
+      tags: [Chapters]
+      summary: Retrieve a Chapter under a Book
+      x-requirement-ids: [REQ-F-032, REQ-F-039]
+      responses:
+        '200':
+          description: Chapter representation.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Chapter'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    put:
+      operationId: replaceBookChapter
+      tags: [Chapters]
+      summary: Replace a Chapter
+      x-requirement-ids: [REQ-F-032, REQ-F-037, REQ-F-039]
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChapterWrite'
+      responses:
+        '200':
+          description: Chapter replaced.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Chapter'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    patch:
+      operationId: updateBookChapter
+      tags: [Chapters]
+      summary: Partially update a Chapter
+      x-requirement-ids: [REQ-F-032, REQ-F-037, REQ-F-039]
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChapterPatch'
+      responses:
+        '200':
+          description: Chapter updated.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Chapter'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    delete:
+      operationId: deleteBookChapter
+      tags: [Chapters]
+      summary: Delete a Chapter
+      description: Associated Entries are retained; associations to the deleted Chapter are removed.
+      x-requirement-ids: [REQ-F-032, REQ-F-034, REQ-F-039]
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '204':
+          description: Chapter deleted; response body is empty.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /api/v1/tags:
+    get:
+      operationId: listTags
+      tags: [Tags]
+      summary: List Tags owned by the authenticated user
+      x-requirement-ids: [REQ-F-033, REQ-F-039]
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/PageCursor'
+      responses:
+        '200':
+          description: A page of Tags.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TagCollection'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    post:
+      operationId: createTag
+      tags: [Tags]
+      summary: Create a Tag
+      x-requirement-ids: [REQ-F-033, REQ-F-039]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TagWrite'
+      responses:
+        '201':
+          description: Tag created.
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tag'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /api/v1/tags/{tagId}:
+    parameters:
+      - $ref: '#/components/parameters/TagId'
+    get:
+      operationId: getTag
+      tags: [Tags]
+      summary: Retrieve a Tag
+      x-requirement-ids: [REQ-F-033, REQ-F-039]
+      responses:
+        '200':
+          description: Tag representation.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tag'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    put:
+      operationId: replaceTag
+      tags: [Tags]
+      summary: Replace a Tag
+      x-requirement-ids: [REQ-F-033, REQ-F-037, REQ-F-039]
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TagWrite'
+      responses:
+        '200':
+          description: Tag replaced.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tag'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    patch:
+      operationId: updateTag
+      tags: [Tags]
+      summary: Partially update a Tag
+      x-requirement-ids: [REQ-F-033, REQ-F-037, REQ-F-039]
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TagPatch'
+      responses:
+        '200':
+          description: Tag updated.
+          headers:
+            ETag:
+              $ref: '#/components/headers/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tag'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    delete:
+      operationId: deleteTag
+      tags: [Tags]
+      summary: Delete a Tag
+      description: Removes Tag associations and retains the associated Entries.
+      x-requirement-ids: [REQ-F-033, REQ-F-034, REQ-F-039]
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '204':
+          description: Tag deleted; response body is empty.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/VersionConflict'
+        '412':
+          $ref: '#/components/responses/PreconditionFailed'
+        '428':
+          $ref: '#/components/responses/PreconditionRequired'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /api/v1/entry-tag-associations:
+    get:
+      operationId: listEntryTagAssociations
+      tags: [Associations]
+      summary: List Entry–Tag associations
+      x-requirement-ids: [REQ-F-033, REQ-F-034, REQ-F-039]
+      parameters:
+        - $ref: '#/components/parameters/EntryIdFilter'
+        - $ref: '#/components/parameters/TagIdFilter'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/PageCursor'
+      responses:
+        '200':
+          description: Associations in the authenticated user's scope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntryTagAssociationCollection'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    post:
+      operationId: createEntryTagAssociation
+      tags: [Associations]
+      summary: Assign a Tag to an Entry
+      x-requirement-ids: [REQ-F-033, REQ-F-034, REQ-F-039]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EntryTagAssociationWrite'
+      responses:
+        '201':
+          description: Association created.
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntryTagAssociation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/DuplicateRelationship'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /api/v1/entry-tag-associations/{associationId}:
+    parameters:
+      - $ref: '#/components/parameters/AssociationId'
+    delete:
+      operationId: deleteEntryTagAssociation
+      tags: [Associations]
+      summary: Remove an Entry–Tag association
+      x-requirement-ids: [REQ-F-034, REQ-F-039]
+      responses:
+        '204':
+          description: Association removed; Entry and Tag remain.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /api/v1/entry-book-associations:
+    get:
+      operationId: listEntryBookAssociations
+      tags: [Associations]
+      summary: List Entry–Book associations
+      x-requirement-ids: [REQ-F-034, REQ-F-039]
+      parameters:
+        - $ref: '#/components/parameters/EntryIdFilter'
+        - $ref: '#/components/parameters/BookIdFilter'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/PageCursor'
+      responses:
+        '200':
+          description: Associations in the authenticated user's scope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntryBookAssociationCollection'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    post:
+      operationId: createEntryBookAssociation
+      tags: [Associations]
+      summary: Create a direct Entry–Book association
+      x-requirement-ids: [REQ-F-034, REQ-F-039]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EntryBookAssociationWrite'
+      responses:
+        '201':
+          description: Direct association created.
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntryBookAssociation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/DuplicateRelationship'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /api/v1/entry-book-associations/{associationId}:
+    parameters:
+      - $ref: '#/components/parameters/AssociationId'
+    delete:
+      operationId: deleteEntryBookAssociation
+      tags: [Associations]
+      summary: Remove a direct Entry–Book association
+      description: Does not remove a Book association still implied by an active Chapter association.
+      x-requirement-ids: [REQ-F-034, REQ-F-039]
+      responses:
+        '204':
+          description: Direct association removed.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /api/v1/entry-chapter-associations:
+    get:
+      operationId: listEntryChapterAssociations
+      tags: [Associations]
+      summary: List Entry–Chapter associations
+      x-requirement-ids: [REQ-F-034, REQ-F-039]
+      parameters:
+        - $ref: '#/components/parameters/EntryIdFilter'
+        - $ref: '#/components/parameters/BookIdFilter'
+        - $ref: '#/components/parameters/ChapterIdFilter'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/PageCursor'
+      responses:
+        '200':
+          description: Associations in the authenticated user's scope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntryChapterAssociationCollection'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    post:
+      operationId: createEntryChapterAssociation
+      tags: [Associations]
+      summary: Associate an Entry with a Chapter
+      description: The server derives the parent Book and applies the Chapter-derived association rule.
+      x-requirement-ids: [REQ-F-016, REQ-F-034, REQ-F-039]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EntryChapterAssociationWrite'
+      responses:
+        '201':
+          description: Association created.
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntryChapterAssociation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/DuplicateRelationship'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /api/v1/entry-chapter-associations/{associationId}:
+    parameters:
+      - $ref: '#/components/parameters/AssociationId'
+    delete:
+      operationId: deleteEntryChapterAssociation
+      tags: [Associations]
+      summary: Remove an Entry–Chapter association
+      description: Preserves a separately created direct association to the parent Book.
+      x-requirement-ids: [REQ-F-018, REQ-F-034, REQ-F-039]
+      responses:
+        '204':
+          description: Association removed.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /api/v1/entry-links:
+    get:
+      operationId: listEntryLinks
+      tags: [Entry Links]
+      summary: List Entry Links
+      x-requirement-ids: [REQ-F-019, REQ-F-020, REQ-F-034, REQ-F-039]
+      parameters:
+        - $ref: '#/components/parameters/EntryIdFilter'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/PageCursor'
+      responses:
+        '200':
+          description: Symmetric links between Entries in the authenticated user's scope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntryLinkCollection'
+              example:
+                items:
+                  - id: link-123
+                    entryIds: [entry-123, entry-456]
+                nextCursor: null
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    post:
+      operationId: createEntryLink
+      tags: [Entry Links]
+      summary: Link two Entries
+      description: Creates an unlabeled symmetric relationship; the two Entry identifiers must differ.
+      x-requirement-ids: [REQ-F-019, REQ-F-020, REQ-F-034, REQ-F-039]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EntryLinkWrite'
+      responses:
+        '201':
+          description: Entry Link created.
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntryLink'
+              example:
+                id: link-123
+                entryIds: [entry-123, entry-456]
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/DuplicateRelationship'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /api/v1/entry-links/{linkId}:
+    parameters:
+      - $ref: '#/components/parameters/LinkId'
+    delete:
+      operationId: deleteEntryLink
+      tags: [Entry Links]
+      summary: Remove an Entry Link
+      description: Removes the link from both Entries without deleting either Entry.
+      x-requirement-ids: [REQ-F-021, REQ-F-034, REQ-F-039]
+      responses:
+        '204':
+          description: Entry Link removed; response body is empty.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /api/v1/sync/push:
+    post:
+      operationId: pushChanges
+      tags: [Synchronization]
+      summary: Push queued local changes
+      description: |
+        Applies changes only to records owned by the authenticated user.
+        Each accepted change is acknowledged and retries must not duplicate
+        effects. Repeating the same request with the same Idempotency-Key must
+        not apply its effects more than once. Reusing a key for a different
+        request returns 409 Conflict with code IDEMPOTENCY_KEY_CONFLICT.
+      x-requirement-ids: [REQ-F-035, REQ-F-037, REQ-F-039]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SyncPushRequest'
+      responses:
+        '200':
+          description: Per-change results. No result or record crosses user scope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncPushResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Version conflict or idempotency-key conflict.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/SyncConflictError'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+  /api/v1/sync/pull:
+    get:
+      operationId: pullChanges
+      tags: [Synchronization]
+      summary: Pull server changes
+      description: |
+        Returns changes and deletion tombstones only for the authenticated user.
+        The cursor is opaque and bound to that user. An omitted cursor starts
+        synchronization from the beginning. An expired cursor returns 410 Gone
+        and requires a full resynchronization.
+      x-requirement-ids: [REQ-F-036, REQ-F-039]
+      parameters:
+        - name: cursor
+          in: query
+          required: false
+          description: Opaque Sync Cursor previously issued to this authenticated user.
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        '200':
+          description: User-scoped changes and the next Sync Cursor.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncPullResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '410':
+          description: Cursor expired; a full resynchronization is required.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Access token; JWT sub claim identifies the userId.
+
+  parameters:
+    EntryId:
+      name: entryId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+    BookId:
+      name: bookId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+    ChapterId:
+      name: chapterId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+    TagId:
+      name: tagId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+    AssociationId:
+      name: associationId
+      in: path
+      required: true
+      description: Stable opaque identifier for an association resource.
+      schema:
+        type: string
+        minLength: 1
+    LinkId:
+      name: linkId
+      in: path
+      required: true
+      description: Stable opaque identifier for an Entry Link resource.
+      schema:
+        type: string
+        minLength: 1
+    Limit:
+      name: limit
+      in: query
+      required: false
+      description: Page size; default 50, maximum 100.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+    PageCursor:
+      name: cursor
+      in: query
+      required: false
+      description: Opaque collection pagination cursor.
+      schema:
+        type: string
+        minLength: 1
+    EntryIdFilter:
+      name: entryId
+      in: query
+      required: false
+      schema:
+        type: string
+        minLength: 1
+    BookIdFilter:
+      name: bookId
+      in: query
+      required: false
+      schema:
+        type: string
+        minLength: 1
+    ChapterIdFilter:
+      name: chapterId
+      in: query
+      required: false
+      schema:
+        type: string
+        minLength: 1
+    TagIdFilter:
+      name: tagId
+      in: query
+      required: false
+      schema:
+        type: string
+        minLength: 1
+    IfMatch:
+      name: If-Match
+      in: header
+      required: false
+      description: |
+        Entity ETag precondition for versioned updates and deletions. If absent,
+        the operation returns 428 Precondition Required; if malformed, it returns
+        400 Bad Request; if it does not match the current ETag, it returns
+        412 Precondition Failed.
+      schema:
+        type: string
+        minLength: 1
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Required key used to make retries of a push request idempotent.
+      schema:
+        type: string
+        minLength: 1
+
+  headers:
+    ETag:
+      description: Opaque entity version validator.
+      schema:
+        type: string
+    Location:
+      description: URI of the newly created resource.
+      schema:
+        type: string
+        format: uri-reference
+      example: /api/v1/entries/entry-123
+
+  schemas:
+    EntryType:
+      type: string
+      enum:
+        - Character
+        - Scene
+        - Plot Idea
+        - World-building
+        - Dialogue/Phrase
+        - General Note
+
+    RegisterRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+          writeOnly: true
+
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+          writeOnly: true
+
+    RefreshRequest:
+      type: object
+      additionalProperties: false
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+          minLength: 1
+          writeOnly: true
+
+    User:
+      type: object
+      additionalProperties: false
+      required: [userId, email, createdAt]
+      properties:
+        userId:
+          type: string
+          minLength: 1
+          readOnly: true
+        email:
+          type: string
+          format: email
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+
+    RegisteredUser:
+      type: object
+      additionalProperties: false
+      required: [user]
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+
+    TokenResponse:
+      type: object
+      additionalProperties: false
+      required: [tokenType, accessToken, accessTokenExpiresIn, refreshToken, user]
+      properties:
+        tokenType:
+          type: string
+          const: Bearer
+        accessToken:
+          type: string
+          minLength: 1
+        accessTokenExpiresIn:
+          type: integer
+          const: 900
+          description: Access-token lifetime in seconds.
+        refreshToken:
+          type: string
+          minLength: 1
+        user:
+          $ref: '#/components/schemas/User'
+
+    EntryWrite:
+      type: object
+      additionalProperties: false
+      required: [content]
+      properties:
+        content:
+          type: string
+          minLength: 1
+          pattern: '\S'
+        title:
+          type: string
+          description: Optional explicit title; blank or omitted uses the REQ-F-003 generated display title.
+        entryType:
+          $ref: '#/components/schemas/EntryType'
+
+    EntryPatch:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        content:
+          type: string
+          minLength: 1
+          pattern: '\S'
+        title:
+          type: string
+        entryType:
+          $ref: '#/components/schemas/EntryType'
+
+    Entry:
+      type: object
+      additionalProperties: false
+      required: [id, version, content, title, displayTitle, entryType, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          minLength: 1
+          readOnly: true
+        version:
+          type: integer
+          minimum: 1
+          readOnly: true
+        content:
+          type: string
+          minLength: 1
+          pattern: '\S'
+        title:
+          type: [string, 'null']
+        displayTitle:
+          type: string
+          description: Explicit title or title derived according to REQ-F-003.
+          readOnly: true
+        entryType:
+          $ref: '#/components/schemas/EntryType'
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+
+    BookWrite:
+      type: object
+      additionalProperties: false
+      required: [title]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          pattern: '\S'
+          description: Book title.
+
+    BookPatch:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        title:
+          type: string
+          minLength: 1
+          pattern: '\S'
+
+    Book:
+      type: object
+      additionalProperties: false
+      required: [id, version, title, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          minLength: 1
+          readOnly: true
+        version:
+          type: integer
+          minimum: 1
+          readOnly: true
+        title:
+          type: string
+          minLength: 1
+          pattern: '\S'
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+
+    ChapterWrite:
+      type: object
+      additionalProperties: false
+      required: [title]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          pattern: '\S'
+          description: Chapter title; parent is selected by the bookId path parameter.
+
+    ChapterPatch:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        title:
+          type: string
+          minLength: 1
+          pattern: '\S'
+
+    Chapter:
+      type: object
+      additionalProperties: false
+      required: [id, version, bookId, title, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          minLength: 1
+          readOnly: true
+        version:
+          type: integer
+          minimum: 1
+          readOnly: true
+        bookId:
+          type: string
+          minLength: 1
+          readOnly: true
+        title:
+          type: string
+          minLength: 1
+          pattern: '\S'
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+
+    TagWrite:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          pattern: '\S'
+          description: Tag display name.
+
+    TagPatch:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          minLength: 1
+          pattern: '\S'
+
+    Tag:
+      type: object
+      additionalProperties: false
+      required: [id, version, name, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          minLength: 1
+          readOnly: true
+        version:
+          type: integer
+          minimum: 1
+          readOnly: true
+        name:
+          type: string
+          minLength: 1
+          pattern: '\S'
+        createdAt:
+          type: string
+          format: date-time
+          readOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          readOnly: true
+
+    EntryCollection:
+      type: object
+      additionalProperties: false
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Entry'
+        nextCursor:
+          type: [string, 'null']
+    BookCollection:
+      type: object
+      additionalProperties: false
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Book'
+        nextCursor:
+          type: [string, 'null']
+    ChapterCollection:
+      type: object
+      additionalProperties: false
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Chapter'
+        nextCursor:
+          type: [string, 'null']
+    TagCollection:
+      type: object
+      additionalProperties: false
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tag'
+        nextCursor:
+          type: [string, 'null']
+
+    EntryTagAssociationWrite:
+      type: object
+      additionalProperties: false
+      required: [entryId, tagId]
+      properties:
+        entryId:
+          type: string
+          minLength: 1
+        tagId:
+          type: string
+          minLength: 1
+    EntryTagAssociation:
+      type: object
+      additionalProperties: false
+      required: [id, entryId, tagId]
+      properties:
+        id:
+          type: string
+          minLength: 1
+          readOnly: true
+        entryId:
+          type: string
+          minLength: 1
+        tagId:
+          type: string
+          minLength: 1
+    EntryTagAssociationCollection:
+      type: object
+      additionalProperties: false
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/EntryTagAssociation'
+        nextCursor:
+          type: [string, 'null']
+
+    EntryBookAssociationWrite:
+      type: object
+      additionalProperties: false
+      required: [entryId, bookId]
+      properties:
+        entryId:
+          type: string
+          minLength: 1
+        bookId:
+          type: string
+          minLength: 1
+    EntryBookAssociation:
+      type: object
+      additionalProperties: false
+      required: [id, entryId, bookId, source]
+      properties:
+        id:
+          type: string
+          minLength: 1
+          readOnly: true
+        entryId:
+          type: string
+          minLength: 1
+        bookId:
+          type: string
+          minLength: 1
+        source:
+          type: string
+          const: direct
+          description: Identifies a direct association, distinct from Chapter-derived association.
+    EntryBookAssociationCollection:
+      type: object
+      additionalProperties: false
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/EntryBookAssociation'
+        nextCursor:
+          type: [string, 'null']
+
+    EntryChapterAssociationWrite:
+      type: object
+      additionalProperties: false
+      required: [entryId, chapterId]
+      properties:
+        entryId:
+          type: string
+          minLength: 1
+        chapterId:
+          type: string
+          minLength: 1
+    EntryChapterAssociation:
+      type: object
+      additionalProperties: false
+      required: [id, entryId, chapterId, bookId]
+      properties:
+        id:
+          type: string
+          minLength: 1
+          readOnly: true
+        entryId:
+          type: string
+          minLength: 1
+        chapterId:
+          type: string
+          minLength: 1
+        bookId:
+          type: string
+          minLength: 1
+          readOnly: true
+    EntryChapterAssociationCollection:
+      type: object
+      additionalProperties: false
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/EntryChapterAssociation'
+        nextCursor:
+          type: [string, 'null']
+
+    EntryLinkWrite:
+      type: object
+      additionalProperties: false
+      required: [entryIdA, entryIdB]
+      properties:
+        entryIdA:
+          type: string
+          minLength: 1
+        entryIdB:
+          type: string
+          minLength: 1
+      description: Entry IDs must be different; link has no label and is symmetric.
+    EntryLink:
+      type: object
+      additionalProperties: false
+      required: [id, entryIds]
+      properties:
+        id:
+          type: string
+          minLength: 1
+          readOnly: true
+        entryIds:
+          type: array
+          minItems: 2
+          maxItems: 2
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
+    EntryLinkCollection:
+      type: object
+      additionalProperties: false
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/EntryLink'
+        nextCursor:
+          type: [string, 'null']
+
+    SyncResourceType:
+      type: string
+      enum:
+        - entry
+        - book
+        - chapter
+        - tag
+        - entryTagAssociation
+        - entryBookAssociation
+        - entryChapterAssociation
+        - entryLink
+
+    SyncOperation:
+      type: string
+      enum: [create, update, delete]
+
+    SyncChange:
+      oneOf:
+        - $ref: '#/components/schemas/SyncCreateChange'
+        - $ref: '#/components/schemas/SyncUpdateChange'
+        - $ref: '#/components/schemas/SyncDeleteChange'
+      discriminator:
+        propertyName: operation
+        mapping:
+          create: '#/components/schemas/SyncCreateChange'
+          update: '#/components/schemas/SyncUpdateChange'
+          delete: '#/components/schemas/SyncDeleteChange'
+      description: userId is not accepted; ownership is derived from the access token.
+    SyncCreateChange:
+      type: object
+      additionalProperties: false
+      required: [changeId, resourceType, operation, resource]
+      properties:
+        changeId:
+          type: string
+          minLength: 1
+        resourceType:
+          $ref: '#/components/schemas/SyncResourceType'
+        operation:
+          type: string
+          const: create
+        resource:
+          type: object
+          description: Resource representation must match resourceType.
+          additionalProperties: true
+    SyncUpdateChange:
+      type: object
+      additionalProperties: false
+      required: [changeId, resourceType, operation, resourceId, baseVersion, resource]
+      properties:
+        changeId:
+          type: string
+          minLength: 1
+        resourceType:
+          $ref: '#/components/schemas/SyncResourceType'
+        operation:
+          type: string
+          const: update
+        resourceId:
+          type: string
+          minLength: 1
+        baseVersion:
+          type: integer
+          minimum: 1
+          description: Version the client last read; used to detect conflicts.
+        resource:
+          type: object
+          description: Updated resource representation must match resourceType.
+          additionalProperties: true
+    SyncDeleteChange:
+      type: object
+      additionalProperties: false
+      required: [changeId, resourceType, operation, resourceId, baseVersion]
+      properties:
+        changeId:
+          type: string
+          minLength: 1
+        resourceType:
+          $ref: '#/components/schemas/SyncResourceType'
+        operation:
+          type: string
+          const: delete
+        resourceId:
+          type: string
+          minLength: 1
+        baseVersion:
+          type: integer
+          minimum: 1
+          description: Version the client last read; used to detect conflicts.
+
+    SyncPushRequest:
+      type: object
+      additionalProperties: false
+      required: [changes]
+      properties:
+        changes:
+          type: array
+          items:
+            $ref: '#/components/schemas/SyncChange'
+
+    SyncChangeResult:
+      type: object
+      additionalProperties: false
+      required: [changeId, status, resourceId]
+      properties:
+        changeId:
+          type: string
+        status:
+          type: string
+          const: acknowledged
+        resourceId:
+          type: string
+        version:
+          type: integer
+          minimum: 1
+    SyncPushResponse:
+      type: object
+      additionalProperties: false
+      required: [results]
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/SyncChangeResult'
+
+    SyncPullChange:
+      type: object
+      additionalProperties: false
+      required: [resourceType, resourceId, operation, version]
+      properties:
+        resourceType:
+          $ref: '#/components/schemas/SyncResourceType'
+        resourceId:
+          type: string
+          minLength: 1
+        operation:
+          $ref: '#/components/schemas/SyncOperation'
+        version:
+          type: integer
+          minimum: 1
+        resource:
+          type: object
+          description: Present for create/update; omitted for deletion tombstones.
+          additionalProperties: true
+    SyncPullResponse:
+      type: object
+      additionalProperties: false
+      required: [changes, nextCursor]
+      properties:
+        changes:
+          type: array
+          items:
+            $ref: '#/components/schemas/SyncPullChange'
+        nextCursor:
+          type: string
+          minLength: 1
+
+    Error:
+      type: object
+      additionalProperties: true
+      required: [type, title, status, code, detail]
+      properties:
+        type:
+          type: string
+          format: uri-reference
+          default: about:blank
+        title:
+          type: string
+        status:
+          type: integer
+        code:
+          type: string
+        detail:
+          type: string
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldError'
+        requestId:
+          type: string
+    FieldError:
+      type: object
+      additionalProperties: false
+      required: [field, message]
+      properties:
+        field:
+          type: string
+        message:
+          type: string
+    SyncConflictError:
+      allOf:
+        - $ref: '#/components/schemas/Error'
+        - type: object
+          oneOf:
+            - required: [code, conflict]
+              properties:
+                code:
+                  type: string
+                  const: VERSION_CONFLICT
+                conflict:
+                  type: object
+                  additionalProperties: true
+                  required: [changeId, localVersion, serverVersion]
+                  properties:
+                    changeId:
+                      type: string
+                    localVersion:
+                      type: object
+                      additionalProperties: true
+                    serverVersion:
+                      type: object
+                      additionalProperties: true
+            - required: [code, idempotencyKey]
+              properties:
+                code:
+                  type: string
+                  const: IDEMPOTENCY_KEY_CONFLICT
+                idempotencyKey:
+                  type: string
+                  minLength: 1
+
+  responses:
+    BadRequest:
+      description: Malformed request or invalid parameter.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            type: about:blank
+            title: Bad Request
+            status: 400
+            code: BAD_REQUEST
+            detail: The request is malformed or contains an invalid parameter.
+    Unauthorized:
+      description: Missing, invalid, or expired credentials.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            type: about:blank
+            title: Unauthorized
+            status: 401
+            code: UNAUTHENTICATED
+            detail: A valid access token is required.
+    Forbidden:
+      description: Resource or referenced record is outside the authenticated user's scope.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            type: about:blank
+            title: Forbidden
+            status: 403
+            code: FORBIDDEN
+            detail: You do not have permission to access this resource.
+    NotFound:
+      description: Resource or parent was not found in the authenticated user's scope.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            type: about:blank
+            title: Not Found
+            status: 404
+            code: NOT_FOUND
+            detail: The requested resource was not found.
+    DuplicateRelationship:
+      description: Duplicate relationship or invalid self-link.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            type: about:blank
+            title: Conflict
+            status: 409
+            code: DUPLICATE_RELATIONSHIP
+            detail: The relationship already exists or the link is invalid.
+    VersionConflict:
+      description: Supplied resource version is stale.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            type: about:blank
+            title: Conflict
+            status: 409
+            code: VERSION_CONFLICT
+            detail: The resource has changed since the supplied version.
+    PreconditionFailed:
+      description: If-Match does not match the current ETag.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            type: about:blank
+            title: Precondition Failed
+            status: 412
+            code: PRECONDITION_FAILED
+            detail: The If-Match value does not match the current resource version.
+    PreconditionRequired:
+      description: Required If-Match header is missing.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            type: about:blank
+            title: Precondition Required
+            status: 428
+            code: PRECONDITION_REQUIRED
+            detail: The If-Match header is required for this operation.
+    UnsupportedMediaType:
+      description: Request body must use UTF-8 JSON.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            type: about:blank
+            title: Unsupported Media Type
+            status: 415
+            code: UNSUPPORTED_MEDIA_TYPE
+            detail: The request body must use UTF-8 JSON.
+    ValidationError:
+      description: Request body is valid JSON but violates schema or domain rules.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            type: about:blank
+            title: Unprocessable Content
+            status: 422
+            code: VALIDATION_ERROR
+            detail: One or more request fields failed validation.
+    InternalError:
+      description: Unexpected server failure.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            type: about:blank
+            title: Internal Server Error
+            status: 500
+            code: INTERNAL_ERROR
+            detail: The server encountered an unexpected error.
+    ServiceUnavailable:
+      description: Service temporarily unavailable.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            type: about:blank
+            title: Service Unavailable
+            status: 503
+            code: SERVICE_UNAVAILABLE
+            detail: The service is temporarily unavailable; try again later.
