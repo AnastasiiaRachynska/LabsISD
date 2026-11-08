@@ -376,6 +376,10 @@ function createSqliteRepositories(database, { now = () => new Date() } = {}) {
         rows.map((row) => mapEntry(row, entryTags, entryBooks, entryChapters, entryLinks)),
       );
     },
+    async delete(id) {
+      const result = await database.runAsync("DELETE FROM entries WHERE id = ?;", id);
+      return result.changes > 0;
+    },
   });
 
   async function replaceChapterAssociations(entryId, chapterIds) {

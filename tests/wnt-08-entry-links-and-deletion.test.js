@@ -88,6 +88,38 @@ describe("WNT-08 SRS and acceptance-criteria traceability", () => {
 });
 
 describe("WNT-08 Entry links and safe deletion", () => {
+  test("requires valid service dependencies", () => {
+    const { createEntryRelationshipService } = require("../src/wnt08/entry-relationships");
+    const validDependencies = {
+      entries: { findById: jest.fn(), delete: jest.fn() },
+      entryLinks: { add: jest.fn(), remove: jest.fn(), listForEntry: jest.fn() },
+      auditLog: { record: jest.fn() },
+      now: () => new Date("2026-01-02T03:04:05.000Z"),
+    };
+
+    expect(() => createEntryRelationshipService()).toThrow(
+      "Entry relationship dependencies are required.",
+    );
+    expect(() => createEntryRelationshipService([])).toThrow(
+      "Entry relationship dependencies are required.",
+    );
+    expect(() =>
+      createEntryRelationshipService({ ...validDependencies, entries: null }),
+    ).toThrow("Entries dependency does not implement the required methods.");
+    expect(() =>
+      createEntryRelationshipService({
+        ...validDependencies,
+        entryLinks: { ...validDependencies.entryLinks, add: undefined },
+      }),
+    ).toThrow("Entry Links dependency does not implement the required methods.");
+    expect(() =>
+      createEntryRelationshipService({ ...validDependencies, auditLog: null }),
+    ).toThrow("Audit Log dependency does not implement the required methods.");
+    expect(() =>
+      createEntryRelationshipService({ ...validDependencies, now: undefined }),
+    ).toThrow("Entry relationships require a clock function.");
+  });
+
   test("[REQ-F-019, REQ-F-020] adds an unlabeled symmetric Entry Link without changing either Entry", async () => {
     const { service, entries, entryLinks, auditLog } = createHarness();
     const firstEntryBefore = await entries.findById("entry-a");
@@ -119,6 +151,37 @@ describe("WNT-08 Entry links and safe deletion", () => {
     await expect(service.addEntryLink("entry-a", "missing-entry")).rejects.toThrow();
 
     expect(entryLinks.add).not.toHaveBeenCalled();
+    expect(auditLog.record).not.toHaveBeenCalled();
+  });
+
+  test("rejects blank Entry IDs and invalid audit clock values", async () => {
+    const { service, entryLinks, auditLog } = createHarness();
+    await expect(service.addEntryLink(" ", "entry-b")).rejects.toThrow(
+      "Entry ID must be a nonblank string.",
+    );
+    await expect(service.addEntryLink("entry-a", "")).rejects.toThrow(
+      "Linked Entry ID must be a nonblank string.",
+    );
+    await expect(service.listLinkedEntries("")).rejects.toThrow(
+      "Entry ID must be a nonblank string.",
+    );
+    expect(entryLinks.add).not.toHaveBeenCalled();
+
+    const { createEntryRelationshipService } = require("../src/wnt08/entry-relationships");
+    for (const invalidDate of ["not-a-date", new Date(Number.NaN)]) {
+      const { entries, entryLinks: links, auditLog: log } = createHarness();
+      const invalidClockService = createEntryRelationshipService({
+        entries,
+        entryLinks: links,
+        auditLog: log,
+        now: () => invalidDate,
+      });
+
+      await expect(invalidClockService.addEntryLink("entry-a", "entry-b")).rejects.toThrow(
+        "Clock must return a valid Date.",
+      );
+      expect(log.record).not.toHaveBeenCalled();
+    }
     expect(auditLog.record).not.toHaveBeenCalled();
   });
 
@@ -177,5 +240,30 @@ describe("WNT-08 Entry links and safe deletion", () => {
     await expect(service.listLinkedEntries("entry-a")).resolves.toEqual([
       expect.objectContaining({ id: "entry-b" }),
     ]);
+  });
+
+  test("reports an Entry deletion failure and does not record a success event", async () => {
+    const { service, entries, entryLinks, auditLog } = createHarness();
+    entries.delete.mockResolvedValue(false);
+
+    await expect(service.deleteEntry("entry-a")).rejects.toThrow(
+      "Entry entry-a could not be deleted.",
+    );
+
+    expect(entryLinks.remove).not.toHaveBeenCalled();
+    expect(auditLog.record).not.toHaveBeenCalled();
+  });
+
+  test("omits stale references when resolving linked Entries", async () => {
+    const { service, entries, entryLinks } = createHarness();
+    entryLinks.listForEntry.mockResolvedValue([
+      { entryId: "entry-b" },
+      { entryId: "deleted-entry" },
+    ]);
+
+    await expect(service.listLinkedEntries("entry-a")).resolves.toEqual([
+      expect.objectContaining({ id: "entry-b" }),
+    ]);
+    expect(entries.findById).toHaveBeenCalledWith("deleted-entry");
   });
 });

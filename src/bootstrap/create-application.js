@@ -2,6 +2,7 @@
 
 const { createEntryCaptureService } = require("../wnt06/entry-capture");
 const { createBookOrganizationService } = require("../wnt07/book-organization");
+const { createEntryRelationshipService } = require("../wnt08/entry-relationships");
 const { initializeLocalDatabase } = require("./local-database");
 const { createSqliteRepositories } = require("./sqlite-repositories");
 
@@ -41,6 +42,12 @@ async function createApplication({ openDatabase, createId, now = () => new Date(
       now,
     }),
     bookOrganization: createBookOrganizationService(serviceDependencies),
+    entryRelationships: createEntryRelationshipService({
+      entries: repositories.entries,
+      entryLinks: repositories.entryLinks,
+      auditLog: repositories.auditLog,
+      now,
+    }),
   };
 }
 

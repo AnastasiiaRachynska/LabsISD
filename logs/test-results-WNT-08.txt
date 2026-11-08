@@ -1,0 +1,22 @@
+WNT-08 implementation test results
+
+Date: 2026-11-08
+
+Focused tests:
+- Command: npm test -- --runInBand tests\wnt-08-entry-links-and-deletion.test.js
+  tests\sqlite-persistence.integration.test.js tests\create-application.test.js
+- Result: 3 suites passed; 23 tests passed.
+
+Full test suite and coverage:
+- Command: npm test -- --runInBand --coverage
+- Result: 8 suites passed; 108 tests passed; 8 todo.
+- Global statement coverage: 94.70% (required: 85%).
+- Global branch coverage: 86.56% (required: 85%).
+
+Additional verification:
+- File-backed real-SQLite integration test passed, including Entry deletion,
+  preservation of the linked Entry, and cascading cleanup of relationships.
+- `npx tsc --noEmit` passed.
+- Android Expo export passed.
+- JavaScript syntax checks and `git diff --check` passed.
+- The existing 2 MB audit-log rotation todo remains unverified.

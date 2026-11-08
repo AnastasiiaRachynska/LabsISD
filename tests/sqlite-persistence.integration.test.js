@@ -73,8 +73,8 @@ sqliteTest("persists application workflows in a real SQLite database", async () 
     await application.bookOrganization.addBookAssociation(firstEntry.id, secondBook.id);
     const secondEntry = await application.entryCapture.createEntry({
       content: "A linked note",
-      entryLinks: [firstEntry.id],
     });
+    await application.entryRelationships.addEntryLink(firstEntry.id, secondEntry.id);
     expect((await application.entryCapture.getEntry(firstEntry.id)).entryLinks).toEqual([
       secondEntry.id,
     ]);
@@ -118,13 +118,13 @@ sqliteTest("persists application workflows in a real SQLite database", async () 
       tags: [tag.id],
     });
     expect(await reopenedApplication.repositories.pendingChanges.list()).toHaveLength(2);
-    expect(await reopenedApplication.repositories.auditLog.list()).toHaveLength(12);
+    expect(await reopenedApplication.repositories.auditLog.list()).toHaveLength(13);
     expect(await reopenedApplication.repositories.entryLinks.listForEntry(firstEntry.id)).toEqual(
       [],
     );
 
-    await reopenedApplication.repositories.entryLinks.add(firstEntry.id, secondEntry.id);
-    await reopenedApplication.repositories.entries.delete(firstEntry.id);
+    await reopenedApplication.entryRelationships.addEntryLink(firstEntry.id, secondEntry.id);
+    await reopenedApplication.entryRelationships.deleteEntry(firstEntry.id);
 
     expect(await reopenedApplication.repositories.entries.findById(firstEntry.id)).toBeNull();
     expect(await reopenedApplication.repositories.entries.findById(secondEntry.id)).toMatchObject({

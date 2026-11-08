@@ -47,5 +47,13 @@ describe("application composition", () => {
         addTagToEntry: expect.any(Function),
       }),
     );
+    expect(application.entryRelationships).toEqual(
+      expect.objectContaining({
+        addEntryLink: expect.any(Function),
+        removeEntryLink: expect.any(Function),
+        listLinkedEntries: expect.any(Function),
+        deleteEntry: expect.any(Function),
+      }),
+    );
   });
 });
