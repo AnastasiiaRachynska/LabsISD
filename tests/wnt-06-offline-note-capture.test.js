@@ -215,6 +215,19 @@ describe("WNT-06 offline Entry capture", () => {
     });
   });
 
+  test("[REQ-F-003, REQ-F-007] updates a Title without replacing existing Content", async () => {
+    const { service } = createHarness();
+    const entry = await service.createEntry({ content: "Existing content" });
+
+    await expect(
+      service.updateEntry(entry.id, { title: "New explicit title" }),
+    ).resolves.toMatchObject({
+      content: "Existing content",
+      title: "New explicit title",
+      displayTitle: "New explicit title",
+    });
+  });
+
   test("[REQ-F-007, REQ-NF-003] queues offline edits and makes no network request", async () => {
     const fetch = jest.spyOn(global, "fetch").mockRejectedValue(
       new Error("Network unavailable"),

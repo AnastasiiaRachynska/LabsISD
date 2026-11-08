@@ -1,0 +1,32 @@
+Local SQLite persistence implementation results
+
+Scope:
+- Added a versioned SQLite schema for Entries, Books, Chapters, Tags, their
+  associations and links, pending changes, synchronization metadata, and
+  diagnostic events.
+- Added SQLite repositories and application startup wiring for the existing
+  Entry capture and Book organization services.
+- Updated the traceability matrix with implementation and test evidence.
+- Added a file-backed SQLite integration test that checks records and queued
+  changes remain available after closing and reopening the database.
+
+Verification:
+- `npm test -- --runInBand --coverage`
+  - 7 suites passed; 90 tests passed; 8 tests remain todo.
+  - Global statement coverage: 94.71% (minimum: 85%).
+  - Global branch coverage: 85.81% (minimum: 85%).
+- `npx tsc --noEmit` passed.
+- Android and iOS Expo exports passed.
+- The file-backed integration test passed using Node's built-in SQLite engine.
+  It runs on Node 22.5 or later; Jest skips it on older Node versions.
+- `git diff --check` and JavaScript syntax checks passed.
+- `npx expo install --check` reports the existing Jest 30.5.2 dependency is
+  newer than Expo SDK 54's recommended Jest ~29.7.0. Tests and exports pass;
+  the dependency was not changed as part of this persistence task.
+
+Issue found and fixed:
+- Real SQLite execution revealed the Chapter insert had four value
+  placeholders for three columns. The repository query and its regression
+  test now use exactly three placeholders.
+
+No commit was created.

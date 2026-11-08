@@ -329,6 +329,23 @@ describe("WNT-07 Book and Chapter organization", () => {
     );
   });
 
+  test("[REQ-F-016, REQ-NF-005] removes a derived Book Association when remaining Chapters belong to another Book", async () => {
+    const { service, chapters, entryChapters, entryBooks } = createHarness();
+    chapters.findById.mockImplementation(async (chapterId) => ({
+      id: chapterId,
+      bookId: chapterId === "chapter-1" ? "book-1" : "book-2",
+    }));
+    entryChapters.listForEntry.mockResolvedValue([{ id: "chapter-2" }]);
+
+    await service.removeChapterAssociation("entry-1", "chapter-1");
+
+    expect(entryBooks.remove).toHaveBeenCalledWith(
+      "entry-1",
+      "book-1",
+      "chapter-derived",
+    );
+  });
+
   test("[REQ-NF-012] records Book, Chapter, and association events in ISO-8601 UTC", async () => {
     const { service, auditLog } = createHarness();
 

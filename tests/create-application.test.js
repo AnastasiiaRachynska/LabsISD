@@ -1,0 +1,51 @@
+"use strict";
+
+const { createApplication } = require("../src/bootstrap/create-application");
+
+describe("application composition", () => {
+  test.each([
+    [undefined, "Application startup requires database and ID factories."],
+    [{ createId: () => "id" }, "Application startup requires database and ID factories."],
+    [{ openDatabase: async () => ({}), createId: () => "id", now: "invalid" }, "Application startup requires a clock function."],
+  ])("rejects invalid startup dependencies", async (options, message) => {
+    await expect(createApplication(options)).rejects.toThrow(message);
+  });
+
+  test("opens SQLite and wires domain services to SQLite repositories", async () => {
+    const database = {
+      execAsync: jest.fn(async () => undefined),
+      runAsync: jest.fn(async () => ({ changes: 1 })),
+      getFirstAsync: jest.fn(async () => null),
+      getAllAsync: jest.fn(async () => []),
+      withTransactionAsync: jest.fn(async (work) => work()),
+    };
+
+    const application = await createApplication({
+      openDatabase: jest.fn(async () => database),
+      createId: () => "generated-id",
+      now: () => new Date("2026-01-02T03:04:05.000Z"),
+    });
+
+    expect(application.database).toBe(database);
+    expect(application.repositories.entries).toBeDefined();
+    expect(application.repositories.books).toBeDefined();
+    expect(application.repositories.chapters).toBeDefined();
+    expect(application.repositories.tags).toBeDefined();
+    expect(application.repositories.entryLinks).toBeDefined();
+    expect(application.repositories.pendingChanges).toBeDefined();
+    expect(application.repositories.syncMetadata).toBeDefined();
+    expect(application.entryCapture).toEqual(
+      expect.objectContaining({
+        createEntry: expect.any(Function),
+        updateEntry: expect.any(Function),
+      }),
+    );
+    expect(application.bookOrganization).toEqual(
+      expect.objectContaining({
+        createBook: expect.any(Function),
+        createChapter: expect.any(Function),
+        addTagToEntry: expect.any(Function),
+      }),
+    );
+  });
+});
