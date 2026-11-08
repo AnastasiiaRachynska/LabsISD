@@ -1,0 +1,39 @@
+TEST-GATE - WNT-11 Server API Resource Management
+
+Date: 2026-11-08
+Requirements: REQ-F-030 through REQ-F-034
+Scope: SRS/OpenAPI traceability and HTTP acceptance tests for Entry, Book,
+Chapter, Tag, their supported associations, and Entry Links.
+
+Gate definition:
+- Acceptance test file: tests/wnt-11-api-resource-management.test.js.
+- Tests launch the existing stateful mock-api/server.js as a child process on
+  an ephemeral localhost port; no mock server code or mock-api-tests files are
+  modified.
+- Traceability tests verify each REQ-F-030 through REQ-F-034 and its AC appears
+  in the SRS, the requirement is present in OpenAPI, and the matrix maps it to
+  WNT-11.
+- HTTP scenarios cover Entry/Book/Chapter/Tag CRUD including PUT replacement,
+  create/read response headers, missing/malformed/stale ETag preconditions,
+  Book-scoped Chapters, validation and media-type errors, list pagination and
+  association filters, duplicate/missing relationships, symmetric Entry Links,
+  relationship cleanup, unauthenticated access, and cross-user isolation.
+- Runtime evidence applies only to the in-memory API mock. It does not establish
+  production backend readiness or satisfy the backend coverage portion of
+  REQ-NF-014.
+- Commands:
+  npm test -- --runInBand tests\wnt-11-api-resource-management.test.js
+  npm test -- --runInBand --coverage
+- Gate criteria: traceability and all acceptance scenarios pass; child server
+  shuts down cleanly; existing 85% statement and branch coverage thresholds
+  remain enforced by the full Jest run.
+
+Constraints:
+- Do not modify mock-api/server.js or any mock-api-tests files.
+- No documentation files are added; gate and execution results are maintained
+  under logs/.
+- No production API implementation is present in src/ at this ticket stage.
+
+Execution status: EXECUTED; see logs/test-results-WNT-11.txt.
+Decision: PASS for the expanded stateful mock acceptance scenarios only;
+production API readiness remains unverified.
