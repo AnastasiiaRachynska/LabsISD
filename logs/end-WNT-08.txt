@@ -1,0 +1,27 @@
+WNT-08 ticket completion log
+
+Date: 2026-11-08
+Ticket: WNT-08 — Entry links and safe deletion
+
+Refactor:
+- Consolidated the duplicated Entry Link add/remove validation, repository
+  operation, and audit-event flow into a shared private helper.
+- Kept the public service methods, validation order, repository calls, and
+  audit event names unchanged.
+- No other complexity or duplication warranted changes in this module.
+
+Verification:
+- Focused command:
+  npm test -- --runInBand tests\wnt-08-entry-links-and-deletion.test.js
+  tests\sqlite-persistence.integration.test.js tests\create-application.test.js
+- Focused result: 3 suites passed; 23 tests passed.
+- Full command: npm test -- --runInBand --coverage
+- Full result: 8 suites passed; 108 tests passed; 8 todo.
+- Global coverage: 95.05% statements and 87.02% branches (minimum: 85%).
+- WNT-08 module coverage: 100% statements and 100% branches.
+- `npx tsc --noEmit`, JavaScript syntax check, and `git diff --check` passed.
+- The real-SQLite integration test passed as part of the focused test run.
+- The existing audit-log rotation todo remains unverified.
+
+Status: WNT-08 implementation and behavior-preserving refactor verified.
+No commit was created.
