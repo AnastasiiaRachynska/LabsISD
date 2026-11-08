@@ -60,5 +60,11 @@ describe("application composition", () => {
         searchEntries: expect.any(Function),
       }),
     );
+    expect(application.exportService).toEqual(
+      expect.objectContaining({
+        exportEntry: expect.any(Function),
+        exportBook: expect.any(Function),
+      }),
+    );
   });
 });

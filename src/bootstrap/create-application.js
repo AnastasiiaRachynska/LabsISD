@@ -4,6 +4,8 @@ const { createEntryCaptureService } = require("../wnt06/entry-capture");
 const { createBookOrganizationService } = require("../wnt07/book-organization");
 const { createEntryRelationshipService } = require("../wnt08/entry-relationships");
 const { createEntrySearchService } = require("../wnt09/entry-search");
+const { createExportService } = require("../wnt10/export");
+const { createExpoFileStorage } = require("./expo-file-storage");
 const { initializeLocalDatabase } = require("./local-database");
 const { createSqliteRepositories } = require("./sqlite-repositories");
 
@@ -13,7 +15,12 @@ const { createSqliteRepositories } = require("./sqlite-repositories");
  * @param {() => string} options.createId
  * @param {() => Date} [options.now]
  */
-async function createApplication({ openDatabase, createId, now = () => new Date() } = {}) {
+async function createApplication({
+  openDatabase,
+  createId,
+  now = () => new Date(),
+  fileStorage,
+} = {}) {
   if (typeof openDatabase !== "function" || typeof createId !== "function") {
     throw new TypeError("Application startup requires database and ID factories.");
   }
@@ -24,6 +31,7 @@ async function createApplication({ openDatabase, createId, now = () => new Date(
   const database = await openDatabase();
   await initializeLocalDatabase(database);
   const repositories = createSqliteRepositories(database, { now });
+  const exportFileStorage = fileStorage || createExpoFileStorage({ createId });
   const serviceDependencies = {
     ...repositories,
     pendingChanges: repositories.pendingChanges,
@@ -51,6 +59,16 @@ async function createApplication({ openDatabase, createId, now = () => new Date(
     }),
     entrySearch: createEntrySearchService({
       entries: repositories.entries,
+    }),
+    exportService: createExportService({
+      entries: repositories.entries,
+      books: repositories.books,
+      chapters: repositories.chapters,
+      entryBooks: repositories.entryBooks,
+      entryChapters: repositories.entryChapters,
+      fileStorage: exportFileStorage,
+      auditLog: repositories.auditLog,
+      now,
     }),
   };
 }

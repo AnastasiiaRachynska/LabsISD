@@ -2,19 +2,32 @@ WNT-10 test execution results
 
 Date: 2026-11-08
 
-Consumer-contract and traceability tests:
-- Command: npm test -- --runInBand tests\wnt-10-export.test.js
-- Result: 1 suite failed; 8 traceability tests passed; 7 behavioral tests
-  failed because src/wnt10/export.js has not been implemented.
+Test-first red phase:
+- Consumer contract command: npm test -- --runInBand tests\wnt-10-export.test.js
+- Result: 8 traceability tests passed; the 7 export behavior tests failed
+  because src/wnt10/export.js had not yet been implemented.
+- Integration command: npm test -- --runInBand tests\wnt-10-export.integration.test.js
+- Result: the real-SQLite/filesystem test failed because the exporter had not
+  yet been implemented. This was the expected red phase.
 
-SQLite/filesystem integration test:
-- Command: npm test -- --runInBand tests\wnt-10-export.integration.test.js
-- Result: 1 test failed because src/wnt10/export.js has not been implemented.
-  Real-SQLite Book Project export and UTF-8 filesystem output remain
-  unverified until implementation.
+Implementation verification:
+- Focused export, filesystem, SQLite integration, and application composition
+  tests passed.
+- Full command: npm test -- --runInBand --coverage
+- Result: 13 suites passed; 153 tests passed; 9 existing tests are todo.
+- Coverage: 95.57% statements and 87.13% branches; both exceed the configured
+  85% thresholds.
+- TypeScript check: npx tsc --noEmit passed.
+- Expo export: Android and iOS bundles both completed successfully.
+- Syntax checks and git diff --check passed.
+- The Expo adapter is verified with mocked filesystem operations and bundling;
+  device/emulator execution has not been performed.
 
-Additional checks:
-- JavaScript syntax checks passed for both new test files.
-- git diff --check passed.
-- No production implementation or mock API files were changed; this is the
-  expected WNT-10 red phase.
+Requirements and limitations:
+- Book export, UTF-8 output, Chapter ordering, duplicate suppression, atomic
+  publication through a temporary file, and UTC audit events are covered by
+  focused tests and/or the SQLite integration test.
+- User-visible error notification cannot be verified because the application
+  does not yet provide an export UI. Export failures are surfaced to callers;
+  no success result is returned on failure.
+- No mock-api or mock-api-tests files were changed.

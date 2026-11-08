@@ -44,7 +44,7 @@ function createHarness(overrides = {}) {
     writeTextFile: jest.fn(async ({ fileName }) => ({ uri: `/exports/${fileName}` })),
   };
   const auditLog = { record: jest.fn(async () => undefined) };
-  const now = () => new Date("2026-01-02T03:04:05.000Z");
+  const now = overrides.now || (() => new Date("2026-01-02T03:04:05.000Z"));
   const { createExportService } = require("../src/wnt10/export");
 
   return {
@@ -122,6 +122,15 @@ describe("WNT-10 Entry and Book exports", () => {
     expect(auditLog.record).not.toHaveBeenCalled();
   });
 
+  test("rejects a blank Entry ID before accessing repositories", async () => {
+    const { service, entries, fileStorage } = createHarness();
+
+    await expect(service.exportEntry("  ")).rejects.toThrow("Entry ID");
+
+    expect(entries.findById).not.toHaveBeenCalled();
+    expect(fileStorage.writeTextFile).not.toHaveBeenCalled();
+  });
+
   test("[REQ-NF-011] surfaces storage failures without reporting export success", async () => {
     const storageError = new Error("Device storage is unavailable.");
     const { service, fileStorage, auditLog } = createHarness({
@@ -132,6 +141,33 @@ describe("WNT-10 Entry and Book exports", () => {
     fileStorage.writeTextFile.mockRejectedValue(storageError);
 
     await expect(service.exportEntry("entry-1")).rejects.toBe(storageError);
+
+    expect(auditLog.record).not.toHaveBeenCalled();
+  });
+
+  test("rejects an invalid clock value without creating an export file", async () => {
+    const { service, fileStorage, auditLog } = createHarness({
+      entryRecords: {
+        "entry-1": { id: "entry-1", content: accentedContent },
+      },
+      now: () => "not-a-date",
+    });
+
+    await expect(service.exportEntry("entry-1")).rejects.toThrow("valid Date");
+
+    expect(fileStorage.writeTextFile).not.toHaveBeenCalled();
+    expect(auditLog.record).not.toHaveBeenCalled();
+  });
+
+  test("rejects an invalid file-storage result and does not record an audit success", async () => {
+    const { service, fileStorage, auditLog } = createHarness({
+      entryRecords: {
+        "entry-1": { id: "entry-1", content: accentedContent },
+      },
+    });
+    fileStorage.writeTextFile.mockResolvedValue({ uri: "/exports/incomplete" });
+
+    await expect(service.exportEntry("entry-1")).rejects.toThrow("completed .txt export");
 
     expect(auditLog.record).not.toHaveBeenCalled();
   });
@@ -152,7 +188,7 @@ describe("WNT-10 Entry and Book exports", () => {
       position: 2,
       createdAt: "2026-01-01T00:00:00.000Z",
     };
-    const { service, fileStorage } = createHarness({
+    const { service, fileStorage, auditLog } = createHarness({
       bookRecords: { [book.id]: book },
       chapterRecords: [secondChapter, firstChapter],
       bookAssociations: [
@@ -187,6 +223,11 @@ describe("WNT-10 Entry and Book exports", () => {
     expect(contents.indexOf("FIRST-CHAPTER-CONTENT")).toBeLessThan(secondChapterIndex);
     expect(contents.indexOf("SECOND-CHAPTER-CONTENT")).toBeGreaterThan(secondChapterIndex);
     expect(contents.indexOf("DIRECT-BOOK-CONTENT")).toBeGreaterThan(generalNotesIndex);
+    expect(auditLog.record).toHaveBeenCalledWith({
+      event: "book.export",
+      resourceId: book.id,
+      occurredAt: "2026-01-02T03:04:05.000Z",
+    });
   });
 
   test("[REQ-F-028] falls back to createdAt order when Chapter positions are unavailable", async () => {
@@ -258,5 +299,43 @@ describe("WNT-10 Entry and Book exports", () => {
 
     expect(fileStorage.writeTextFile).not.toHaveBeenCalled();
     expect(auditLog.record).not.toHaveBeenCalled();
+  });
+
+  test("rejects invalid Book repository results instead of writing incomplete content", async () => {
+    const { service, chapters, fileStorage, entryBooks } = createHarness({
+      bookRecords: { "book-1": { id: "book-1", name: "A Novel" } },
+    });
+    chapters.listByBookId.mockResolvedValue(null);
+
+    await expect(service.exportBook("book-1")).rejects.toThrow("must return arrays");
+
+    chapters.listByBookId.mockResolvedValue([]);
+    entryBooks.listForBook.mockResolvedValue(null);
+    await expect(service.exportBook("book-1")).rejects.toThrow("must return arrays");
+    expect(fileStorage.writeTextFile).not.toHaveBeenCalled();
+  });
+
+  test("rejects an associated Entry that has been removed", async () => {
+    const { service, fileStorage } = createHarness({
+      bookRecords: { "book-1": { id: "book-1", name: "A Novel" } },
+      bookAssociations: [{ entryId: "missing-entry", source: "direct" }],
+    });
+
+    await expect(service.exportBook("book-1")).rejects.toThrow("was not found");
+
+    expect(fileStorage.writeTextFile).not.toHaveBeenCalled();
+  });
+
+  test("rejects invalid Entry-Chapter repository results", async () => {
+    const { service, entryChapters, fileStorage } = createHarness({
+      bookRecords: { "book-1": { id: "book-1", name: "A Novel" } },
+      bookAssociations: [{ entryId: "entry-1", source: "direct" }],
+      entryRecords: { "entry-1": { id: "entry-1", content: "Note" } },
+    });
+    entryChapters.listForEntry.mockResolvedValue(null);
+
+    await expect(service.exportBook("book-1")).rejects.toThrow("must return an array");
+
+    expect(fileStorage.writeTextFile).not.toHaveBeenCalled();
   });
 });
