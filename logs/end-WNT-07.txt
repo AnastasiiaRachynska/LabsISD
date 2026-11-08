@@ -1,0 +1,27 @@
+WNT-07 ticket completion log
+
+Date: 2026-11-08
+Ticket: WNT-07 — Book and Chapter organization
+
+Refactor:
+- Consolidated the duplicated Book and Chapter create/update flows into
+  shared named-record helpers.
+- Reused Chapter deletion from Book deletion to keep relationship detachment
+  and audit behavior consistent.
+- Simplified Chapter-association removal so the chapter-derived Book
+  association remains while another associated Chapter in that Book remains.
+- Added a regression test for that multi-Chapter relationship case.
+
+Verification after refactor:
+- Focused command:
+  npm test -- --runInBand tests\wnt-07-book-chapter-organization.test.js
+- Focused result: 1 suite passed; 24 tests passed, 1 todo.
+- Full command: npm test -- --runInBand
+- Full result: 3 suites passed; 57 tests passed, 8 todo.
+- JavaScript syntax checks and git diff --check passed.
+- The WNT-07 audit-log 2 MB FIFO rotation test remains todo. The other
+  outstanding todo tests concern WNT-06 mobile/platform behavior.
+- Detailed WNT-07 test results remain in logs/test-results-WNT-07.txt.
+
+Status: WNT-07 executable tests pass; audit-log rotation remains unverified.
+No commit was created.
