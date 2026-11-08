@@ -54,7 +54,7 @@ function createEntryRelationshipService(dependencies) {
     });
   }
 
-  async function addEntryLink(entryId, linkedEntryId) {
+  async function changeEntryLink(entryId, linkedEntryId, operation, event) {
     if (!isNonblankString(linkedEntryId)) {
       throw new TypeError("Linked Entry ID must be a nonblank string.");
     }
@@ -63,21 +63,16 @@ function createEntryRelationshipService(dependencies) {
     }
     await requireEntry(entryId);
     await requireEntry(linkedEntryId);
-    await entryLinks.add(entryId, linkedEntryId);
-    await recordEvent("entry.link.add", entryId);
+    await entryLinks[operation](entryId, linkedEntryId);
+    await recordEvent(event, entryId);
+  }
+
+  async function addEntryLink(entryId, linkedEntryId) {
+    await changeEntryLink(entryId, linkedEntryId, "add", "entry.link.add");
   }
 
   async function removeEntryLink(entryId, linkedEntryId) {
-    if (!isNonblankString(linkedEntryId)) {
-      throw new TypeError("Linked Entry ID must be a nonblank string.");
-    }
-    if (entryId === linkedEntryId) {
-      throw new TypeError("An Entry cannot be linked to itself.");
-    }
-    await requireEntry(entryId);
-    await requireEntry(linkedEntryId);
-    await entryLinks.remove(entryId, linkedEntryId);
-    await recordEvent("entry.link.remove", entryId);
+    await changeEntryLink(entryId, linkedEntryId, "remove", "entry.link.remove");
   }
 
   async function listLinkedEntries(entryId) {
