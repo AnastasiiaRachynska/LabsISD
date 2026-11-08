@@ -1,0 +1,47 @@
+TEST-GATE - WNT-09 Search and filters
+
+Date: 2026-11-08
+Requirements: REQ-F-022 through REQ-F-025, REQ-NF-002, REQ-NF-003
+Scope: Requirement traceability and consumer-contract/integration tests for
+  case-insensitive Entry search, Entry Type filters, Tag filters, combined
+  strict-AND behavior, local persistence, and search latency.
+
+Gate definition:
+- Consumer-contract test file:
+  tests/wnt-09-search-and-filters.test.js.
+- Real-SQLite integration test:
+  tests/wnt-09-search-persistence.integration.test.js.
+- Traceability checks verify each of the 6 requirement/acceptance-criterion
+  pairs appears in the SRS and maps to WNT-09 in the traceability matrix.
+- Behavioral tests cover case-insensitive search in explicit Title and
+  Content, generated Display Title search, no-match results, one and multiple
+  Entry Type selections, one and multiple Tags, and strict AND logic across
+  query/Type/Tag criteria.
+- Integration coverage searches persisted Entry and Tag data through the
+  composed application using real SQLite.
+- The 2-second search/filter latency criterion on a minimum supported
+  simulator/emulator with 1,000 SQLite Entries is explicitly todo. A host
+  machine Jest timing is not accepted as evidence for this platform criterion.
+- Commands:
+  npm test -- --runInBand tests\wnt-09-search-and-filters.test.js
+  tests\wnt-09-search-persistence.integration.test.js
+  npm test -- --runInBand --coverage
+- Gate criteria: traceability and behavioral tests pass after implementation;
+  real-SQLite integration passes on Node 22.5+; platform latency remains
+  unverified until measured on the specified device/emulator.
+
+Boundary and assumptions:
+- The SRS does not prescribe a search service interface. The tests define
+  `createEntrySearchService({ entries })` with
+  `searchEntries({ query, entryTypes, tagIds })`.
+- Search is interpreted as case-insensitive substring matching across Title,
+  Content, and Display Title. A missing or whitespace-only query and empty
+  filter arrays impose no constraint.
+- Multiple Entry Types and Tags use strict AND semantics as explicitly
+  required. Since each Entry has one Entry Type, distinct selected Types
+  produce no matches.
+- Tag filters use Tag IDs.
+- No changes were made to mock-api-tests or mock-api.
+
+Execution status: NOT RUN.
+Decision: PENDING - run tests as the red phase before implementing WNT-09.
