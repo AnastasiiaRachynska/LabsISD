@@ -1,26 +1,40 @@
-WNT-12 test execution results
+WNT-12 synchronization test results
 
 Date: 2026-11-08
 
-Test-first red phase:
-- Command: npm test -- --runInBand tests\wnt-12-synchronization.test.js
-- Result: 1 suite failed; 5 SRS/acceptance/OpenAPI traceability checks passed;
-  12 synchronization behavior tests failed because
-  src/wnt12/synchronization.js has not been implemented.
-- This is the expected red phase. No production synchronization code was added.
+TDD red phase:
+- Command: npm test -- --runInBand tests/wnt-12-synchronization.test.js
+- Result: 5 traceability tests passed; 12 synchronization behaviors failed
+  because the implementation module was absent, as expected.
 
-Additional checks:
-- `node --check tests\wnt-12-synchronization.test.js` passed.
-- `git diff --check` passed.
-- No files under mock-api or mock-api-tests were modified.
-- Full suite and coverage gate are deferred until after implementation.
+Green phase:
+- Command: npm test -- --runInBand --coverage
+- Result: 16 suites passed; 200 tests passed; 9 existing tests marked todo.
+- Statements: 92.34% (required: 85%).
+- Branches: 86.15% (required: 85%).
+- Coverage gate: PASS.
+- Real SQLite synchronization integration covers queue acknowledgments,
+  remote/local ID mapping, create/update/delete and association tombstones,
+  conflict persistence, cursor commits, rollback on failed local application,
+  and sync audit events.
 
-Outstanding:
-- Implement push retries and per-change acknowledgments without dropping
-  queued changes.
-- Apply remote creates, updates, and deletion tombstones atomically with cursor
-  persistence.
-- Preserve and resolve local/server version conflicts through subsequent
-  queued updates.
-- Verify real-SQLite synchronization persistence, full Jest coverage, and
-  applicable TypeScript/Expo checks after implementation.
+Additional verification:
+- Focused WNT-12 consumer and SQLite integration tests passed.
+- npm test -- --runInBand tests/wnt-07-book-chapter-organization.test.js
+  tests/wnt-08-entry-links-and-deletion.test.js
+  tests/sqlite-persistence.integration.test.js
+  tests/wnt-12-synchronization.test.js
+  tests/wnt-12-sqlite-sync.integration.test.js
+  tests/local-database.test.js
+  tests/create-application.test.js: passed.
+- npx tsc --noEmit: passed.
+- Node syntax checks for changed JavaScript modules: passed.
+- git diff --check: passed.
+- npx expo export --platform android --platform ios: passed.
+
+Limitations:
+- No mock API directories were changed and no production server was available.
+- App.tsx currently has no API URL/authentication provider. The application
+  exposes synchronization when a configured syncApi is injected; automatic
+  online scheduling, UI conflict resolution, and device/server validation
+  remain outstanding integration work.

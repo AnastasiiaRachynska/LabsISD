@@ -67,4 +67,54 @@ describe("application composition", () => {
       }),
     );
   });
+
+  test("wires synchronization to SQLite repositories when a sync API is configured", async () => {
+    const database = {
+      execAsync: jest.fn(async () => undefined),
+      runAsync: jest.fn(async () => ({ changes: 1 })),
+      getFirstAsync: jest.fn(async () => null),
+      getAllAsync: jest.fn(async () => []),
+      withTransactionAsync: jest.fn(async (work) => work()),
+    };
+    const syncApi = {
+      pushChanges: jest.fn(),
+      pullChanges: jest.fn(),
+    };
+    const application = await createApplication({
+      openDatabase: async () => database,
+      createId: () => "sync-id",
+      syncApi,
+    });
+
+    expect(application.synchronization).toEqual(
+      expect.objectContaining({
+        pushPendingChanges: expect.any(Function),
+        pullChanges: expect.any(Function),
+        resolveConflict: expect.any(Function),
+      }),
+    );
+    expect(application.repositories.conflicts).toBeDefined();
+  });
+
+  test("rejects malformed sync transports and skips outbox work for missing Tags", async () => {
+    const database = {
+      execAsync: jest.fn(async () => undefined),
+      runAsync: jest.fn(async () => ({ changes: 1 })),
+      getFirstAsync: jest.fn(async () => null),
+      getAllAsync: jest.fn(async () => []),
+      withTransactionAsync: jest.fn(async (work) => work()),
+    };
+    const options = {
+      openDatabase: async () => database,
+      createId: () => "sync-id",
+    };
+
+    await expect(createApplication({ ...options, syncApi: {} })).rejects.toThrow(
+      "Application sync API must implement",
+    );
+    const application = await createApplication(options);
+    await expect(application.repositories.tags.update("missing", { name: "Updated" })).resolves.toBeNull();
+    await expect(application.repositories.tags.delete("missing")).resolves.toBe(true);
+    expect(await application.repositories.pendingChanges.list()).toEqual([]);
+  });
 });

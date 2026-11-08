@@ -84,6 +84,27 @@ describe("local database bootstrap", () => {
     );
   });
 
+  test("migrates version 2 databases with sync persistence tables", async () => {
+    const database = {
+      execAsync: jest.fn(async () => undefined),
+      runAsync: jest.fn(async () => ({ changes: 1 })),
+      getFirstAsync: jest.fn(async () => ({ value: "2" })),
+      withTransactionAsync: jest.fn(async (work) => work()),
+    };
+
+    await initializeLocalDatabase(database);
+
+    expect(database.execAsync).toHaveBeenCalledWith(
+      "ALTER TABLE pending_changes ADD COLUMN base_version INTEGER;",
+    );
+    expect(database.execAsync).toHaveBeenCalledWith(
+      expect.stringContaining("CREATE TABLE IF NOT EXISTS sync_conflicts"),
+    );
+    expect(database.execAsync).toHaveBeenCalledWith(
+      expect.stringContaining("CREATE TABLE IF NOT EXISTS sync_resource_ids"),
+    );
+  });
+
   test("rejects a malformed local schema version", async () => {
     const database = {
       execAsync: jest.fn(async () => undefined),

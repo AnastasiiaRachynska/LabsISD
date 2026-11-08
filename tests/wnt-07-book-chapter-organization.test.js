@@ -86,6 +86,7 @@ function createHarness() {
     detachChapter: jest.fn(async () => undefined),
   };
   const auditLog = { record: jest.fn(async () => undefined) };
+  const pendingChanges = { enqueue: jest.fn(async () => undefined) };
   let nextId = 0;
   const { createBookOrganizationService } = loadSystemUnderTest();
 
@@ -98,6 +99,7 @@ function createHarness() {
     entryBooks,
     entryChapters,
     auditLog,
+    pendingChanges,
     service: createBookOrganizationService({
       books,
       chapters,
@@ -107,6 +109,7 @@ function createHarness() {
       entryBooks,
       entryChapters,
       auditLog,
+      pendingChanges,
       createId: () => `resource-${++nextId}`,
       now: () => new Date("2026-01-02T03:04:05.000Z"),
     }),
@@ -127,7 +130,7 @@ describe("WNT-07 SRS and acceptance-criteria traceability", () => {
 
 describe("WNT-07 Book and Chapter organization", () => {
   test("[REQ-F-009] adds and removes a Tag from an Entry", async () => {
-    const { service, entries, tags, entryTags } = createHarness();
+    const { service, entries, tags, entryTags, pendingChanges } = createHarness();
     entryTags.listForEntry.mockResolvedValue([{ id: "tag-1", name: "Mystery" }]);
 
     await service.addTagToEntry("entry-1", "tag-1");
@@ -135,6 +138,12 @@ describe("WNT-07 Book and Chapter organization", () => {
     expect(entries.findById).toHaveBeenCalledWith("entry-1");
     expect(tags.findById).toHaveBeenCalledWith("tag-1");
     expect(entryTags.add).toHaveBeenCalledWith("entry-1", "tag-1");
+    expect(pendingChanges.enqueue).toHaveBeenCalledWith({
+      operation: "create",
+      resourceType: "entryTagAssociation",
+      resourceId: 'entryTagAssociation:["entry-1","tag-1"]',
+      payload: { entryId: "entry-1", tagId: "tag-1" },
+    });
     await expect(service.listTagsForEntry("entry-1")).resolves.toEqual([
       { id: "tag-1", name: "Mystery" },
     ]);
@@ -142,6 +151,12 @@ describe("WNT-07 Book and Chapter organization", () => {
     await service.removeTagFromEntry("entry-1", "tag-1");
 
     expect(entryTags.remove).toHaveBeenCalledWith("entry-1", "tag-1");
+    expect(pendingChanges.enqueue).toHaveBeenLastCalledWith({
+      operation: "delete",
+      resourceType: "entryTagAssociation",
+      resourceId: 'entryTagAssociation:["entry-1","tag-1"]',
+      payload: undefined,
+    });
   });
 
   test("[REQ-F-009, REQ-NF-005] rejects adding a Tag to a missing Entry", async () => {
@@ -154,7 +169,7 @@ describe("WNT-07 Book and Chapter organization", () => {
   });
 
   test("[REQ-F-011] creates, lists, views, edits, and deletes Books", async () => {
-    const { service, books } = createHarness();
+    const { service, books, pendingChanges } = createHarness();
 
     const book = await service.createBook({ name: "New Book" });
     expect(book).toMatchObject({ id: "resource-1", name: "New Book" });
@@ -168,6 +183,11 @@ describe("WNT-07 Book and Chapter organization", () => {
 
     expect(books.update).toHaveBeenCalledWith(book.id, { name: "Renamed Book" });
     expect(books.delete).toHaveBeenCalledWith(book.id);
+    expect(pendingChanges.enqueue.mock.calls.map(([change]) => change.operation)).toEqual([
+      "create",
+      "update",
+      "delete",
+    ]);
   });
 
   test("[REQ-F-011, REQ-NF-005] deleting a Book detaches its Entry relationships without deleting Entries", async () => {

@@ -1,6 +1,6 @@
 "use strict";
 
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 const SCHEMA_SQL = `
   CREATE TABLE IF NOT EXISTS entries (
@@ -81,6 +81,7 @@ const SCHEMA_SQL = `
     resource_type TEXT NOT NULL,
     resource_id TEXT NOT NULL,
     payload TEXT NOT NULL DEFAULT '{}',
+    base_version INTEGER,
     enqueued_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
   );
   CREATE INDEX IF NOT EXISTS pending_changes_order_idx ON pending_changes(id);
@@ -88,6 +89,29 @@ const SCHEMA_SQL = `
   CREATE TABLE IF NOT EXISTS sync_metadata (
     key TEXT PRIMARY KEY NOT NULL,
     value TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS sync_conflicts (
+    change_id TEXT PRIMARY KEY NOT NULL,
+    resource_type TEXT NOT NULL,
+    resource_id TEXT NOT NULL,
+    local_version TEXT NOT NULL,
+    server_version TEXT NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS sync_remote_ids (
+    resource_type TEXT NOT NULL,
+    remote_id TEXT NOT NULL,
+    local_details TEXT NOT NULL,
+    PRIMARY KEY (resource_type, remote_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS sync_resource_ids (
+    resource_type TEXT NOT NULL,
+    local_id TEXT NOT NULL,
+    remote_id TEXT NOT NULL,
+    PRIMARY KEY (resource_type, local_id),
+    UNIQUE (resource_type, remote_id)
   );
 
   CREATE TABLE IF NOT EXISTS diagnostic_events (
@@ -134,6 +158,12 @@ async function initializeLocalDatabase(database) {
 
   await database.withTransactionAsync(async () => {
     if (currentVersion < 2) {
+      await database.execAsync(SCHEMA_SQL);
+    }
+    if (currentVersion === 2) {
+      await database.execAsync(
+        "ALTER TABLE pending_changes ADD COLUMN base_version INTEGER;",
+      );
       await database.execAsync(SCHEMA_SQL);
     }
     await database.runAsync(

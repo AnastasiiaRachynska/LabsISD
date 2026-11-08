@@ -417,13 +417,89 @@ function createSqliteRepositories(database, { now = () => new Date() } = {}) {
   const pendingChanges = {
     async enqueue(change) {
       validatePendingChange(change);
+      const existing = await database.getAllAsync(
+        `SELECT id, operation FROM pending_changes
+         WHERE resource_type = ? AND resource_id = ? ORDER BY id;`,
+        change.resourceType,
+        change.resourceId,
+      );
+      const queuedCreate = existing.find((row) => row.operation === "create");
+      if (queuedCreate && change.operation === "delete") {
+        await database.runAsync(
+          "DELETE FROM pending_changes WHERE resource_type = ? AND resource_id = ?;",
+          change.resourceType,
+          change.resourceId,
+        );
+        return null;
+      }
+      if (queuedCreate && change.operation === "update") {
+        await database.runAsync(
+          "UPDATE pending_changes SET payload = ? WHERE id = ?;",
+          JSON.stringify(change.payload || {}),
+          queuedCreate.id,
+        );
+        await database.runAsync(
+          "DELETE FROM pending_changes WHERE resource_type = ? AND resource_id = ? AND id != ?;",
+          change.resourceType,
+          change.resourceId,
+          queuedCreate.id,
+        );
+        return queuedCreate.id;
+      }
+      const queuedUpdate = existing.find((row) => row.operation === "update");
+      if (queuedUpdate && change.operation === "update") {
+        let baseVersion = change.baseVersion ?? null;
+        if (baseVersion === null) {
+          const savedVersion = await database.getFirstAsync(
+            "SELECT value FROM sync_metadata WHERE key = ?;",
+            `version:${change.resourceType}:${change.resourceId}`,
+          );
+          const parsedVersion = savedVersion ? Number(savedVersion.value) : null;
+          if (Number.isInteger(parsedVersion) && parsedVersion > 0) {
+            baseVersion = parsedVersion;
+          }
+        }
+        await database.runAsync(
+          "UPDATE pending_changes SET payload = ?, base_version = ? WHERE id = ?;",
+          JSON.stringify(change.payload || {}),
+          baseVersion,
+          queuedUpdate.id,
+        );
+        await database.runAsync(
+          "DELETE FROM pending_changes WHERE resource_type = ? AND resource_id = ? AND id != ?;",
+          change.resourceType,
+          change.resourceId,
+          queuedUpdate.id,
+        );
+        return queuedUpdate.id;
+      }
+      if (change.operation === "delete") {
+        await database.runAsync(
+          `DELETE FROM pending_changes
+           WHERE resource_type = ? AND resource_id = ? AND operation = 'update';`,
+          change.resourceType,
+          change.resourceId,
+        );
+      }
+      let baseVersion = change.baseVersion ?? null;
+      if (baseVersion === null && change.operation !== "create") {
+        const savedVersion = await database.getFirstAsync(
+          "SELECT value FROM sync_metadata WHERE key = ?;",
+          `version:${change.resourceType}:${change.resourceId}`,
+        );
+        const parsedVersion = savedVersion ? Number(savedVersion.value) : null;
+        if (Number.isInteger(parsedVersion) && parsedVersion > 0) {
+          baseVersion = parsedVersion;
+        }
+      }
       await database.runAsync(
-        `INSERT INTO pending_changes (operation, resource_type, resource_id, payload)
-         VALUES (?, ?, ?, ?);`,
+        `INSERT INTO pending_changes (operation, resource_type, resource_id, payload, base_version)
+         VALUES (?, ?, ?, ?, ?);`,
         change.operation,
         change.resourceType,
         change.resourceId,
         JSON.stringify(change.payload || {}),
+        baseVersion,
       );
     },
     async list() {
@@ -434,11 +510,25 @@ function createSqliteRepositories(database, { now = () => new Date() } = {}) {
         resourceType: row.resource_type,
         resourceId: row.resource_id,
         payload: JSON.parse(row.payload),
+        baseVersion: row.base_version,
         enqueuedAt: row.enqueued_at,
       }));
     },
     async removeThrough(id) {
       await database.runAsync("DELETE FROM pending_changes WHERE id <= ?;", id);
+    },
+    async removeAcknowledged(ids) {
+      if (!Array.isArray(ids) || ids.some((id) => !Number.isInteger(id) || id < 1)) {
+        throw new TypeError("Acknowledged pending change IDs must be positive integers.");
+      }
+      if (ids.length === 0) {
+        return;
+      }
+      const placeholders = ids.map(() => "?").join(", ");
+      await database.runAsync(
+        `DELETE FROM pending_changes WHERE id IN (${placeholders});`,
+        ...ids,
+      );
     },
   };
 
@@ -494,6 +584,42 @@ function createSqliteRepositories(database, { now = () => new Date() } = {}) {
     },
   };
 
+  const conflicts = {
+    async save(conflict) {
+      validateSyncConflict(conflict);
+      await database.runAsync(
+        `INSERT OR REPLACE INTO sync_conflicts
+         (change_id, resource_type, resource_id, local_version, server_version)
+         VALUES (?, ?, ?, ?, ?);`,
+        conflict.changeId,
+        conflict.resourceType,
+        conflict.resourceId,
+        JSON.stringify(conflict.localVersion),
+        JSON.stringify(conflict.serverVersion),
+      );
+    },
+    async findByChangeId(changeId) {
+      requireNonblankString(changeId, "Conflict change ID");
+      const row = await database.getFirstAsync(
+        "SELECT * FROM sync_conflicts WHERE change_id = ?;",
+        changeId,
+      );
+      return row
+        ? {
+            changeId: row.change_id,
+            resourceType: row.resource_type,
+            resourceId: row.resource_id,
+            localVersion: JSON.parse(row.local_version),
+            serverVersion: JSON.parse(row.server_version),
+          }
+        : null;
+    },
+    async remove(changeId) {
+      requireNonblankString(changeId, "Conflict change ID");
+      await database.runAsync("DELETE FROM sync_conflicts WHERE change_id = ?;", changeId);
+    },
+  };
+
   return {
     entries,
     books,
@@ -506,6 +632,7 @@ function createSqliteRepositories(database, { now = () => new Date() } = {}) {
     pendingChanges,
     auditLog,
     syncMetadata,
+    conflicts,
   };
 }
 
@@ -638,6 +765,26 @@ function validatePendingChange(change) {
   }
   requireNonblankString(change.resourceType, "Pending change resource type");
   requireNonblankString(change.resourceId, "Pending change resource ID");
+  if (
+    change.baseVersion !== undefined &&
+    (!Number.isInteger(change.baseVersion) || change.baseVersion < 1)
+  ) {
+    throw new TypeError("Pending change base version must be a positive integer.");
+  }
+}
+
+function validateSyncConflict(conflict) {
+  if (!conflict || typeof conflict !== "object") {
+    throw new TypeError("Sync conflict must be an object.");
+  }
+  requireNonblankString(conflict.changeId, "Conflict change ID");
+  requireNonblankString(conflict.resourceType, "Conflict resource type");
+  requireNonblankString(conflict.resourceId, "Conflict resource ID");
+  for (const field of ["localVersion", "serverVersion"]) {
+    if (!conflict[field] || typeof conflict[field] !== "object" || Array.isArray(conflict[field])) {
+      throw new TypeError(`Conflict ${field} must be an object.`);
+    }
+  }
 }
 
 function validateAuditEvent(event) {

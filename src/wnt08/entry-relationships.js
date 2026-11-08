@@ -32,8 +32,19 @@ function createEntryRelationshipService(dependencies) {
   if (!dependencies || typeof dependencies !== "object" || Array.isArray(dependencies)) {
     throw new TypeError("Entry relationship dependencies are required.");
   }
-  const { entries, entryLinks, auditLog, now } = dependencies;
+  const { entries, entryLinks, auditLog, now, pendingChanges } = dependencies;
   validateDependencies(dependencies);
+
+  async function enqueueChange(operation, resourceType, resourceId, payload) {
+    if (pendingChanges) {
+      await pendingChanges.enqueue({ operation, resourceType, resourceId, payload });
+    }
+  }
+
+  function entryLinkResourceId(entryId, linkedEntryId) {
+    const ids = [entryId, linkedEntryId].sort();
+    return `entryLink:${JSON.stringify(ids)}`;
+  }
 
   async function requireEntry(entryId) {
     if (!isNonblankString(entryId)) {
@@ -64,6 +75,13 @@ function createEntryRelationshipService(dependencies) {
     await requireEntry(entryId);
     await requireEntry(linkedEntryId);
     await entryLinks[operation](entryId, linkedEntryId);
+    const resourceId = entryLinkResourceId(entryId, linkedEntryId);
+    await enqueueChange(
+      operation === "add" ? "create" : "delete",
+      "entryLink",
+      resourceId,
+      operation === "add" ? { entryIds: [entryId, linkedEntryId] } : undefined,
+    );
     await recordEvent(event, entryId);
   }
 
@@ -85,15 +103,21 @@ function createEntryRelationshipService(dependencies) {
   }
 
   async function deleteEntry(entryId) {
-    await requireEntry(entryId);
+    const entry = await requireEntry(entryId);
     const links = await entryLinks.listForEntry(entryId);
     for (const link of links) {
       await entryLinks.remove(entryId, link.entryId);
+      await enqueueChange(
+        "delete",
+        "entryLink",
+        entryLinkResourceId(entryId, link.entryId),
+      );
     }
     const deleted = await entries.delete(entryId);
     if (!deleted) {
       throw new Error(`Entry ${entryId} could not be deleted.`);
     }
+    await enqueueChange("delete", "entry", entryId, entry);
     await recordEvent("entry.delete", entryId);
   }
 

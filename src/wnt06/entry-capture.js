@@ -124,7 +124,7 @@ function createEntryCaptureService({ entries, pendingChanges, auditLog, createId
     validateAssociations(entry);
 
     const savedEntry = await entries.create(entry);
-    await recordChange("create", entry.id);
+    await recordChange("create", entry.id, savedEntry);
     return savedEntry;
   }
 
@@ -172,15 +172,16 @@ function createEntryCaptureService({ entries, pendingChanges, auditLog, createId
     if (!updatedEntry) {
       throw new Error(`Entry ${id} could not be updated.`);
     }
-    await recordChange("update", id);
+    await recordChange("update", id, updatedEntry);
     return updatedEntry;
   }
 
-  async function recordChange(operation, resourceId) {
+  async function recordChange(operation, resourceId, payload) {
     await pendingChanges.enqueue({
       operation,
       resourceType: "entry",
       resourceId,
+      payload,
     });
     await auditLog.record({
       event: `entry.${operation}`,

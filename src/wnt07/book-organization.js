@@ -74,6 +74,7 @@ function createBookOrganizationService(dependencies) {
     auditLog,
     createId,
     now,
+    pendingChanges,
   } = dependencies;
   validateDependencies(dependencies);
 
@@ -83,6 +84,22 @@ function createBookOrganizationService(dependencies) {
       resourceId,
       occurredAt: now().toISOString(),
     });
+  }
+
+  async function recordLocalChange(operation, resourceType, resourceId, payload) {
+    if (!pendingChanges) {
+      return;
+    }
+    await pendingChanges.enqueue({
+      operation,
+      resourceType,
+      resourceId,
+      payload,
+    });
+  }
+
+  function associationResourceId(resourceType, ...ids) {
+    return `${resourceType}:${JSON.stringify(ids)}`;
   }
 
   async function requireEntry(entryId) {
@@ -104,6 +121,8 @@ function createBookOrganizationService(dependencies) {
       ...input,
       ...additionalFields,
     });
+    const resourceType = kind.toLowerCase();
+    await recordLocalChange("create", resourceType, record.id, record);
     await recordEvent(`${kind.toLowerCase()}.create`, record.id);
     return record;
   }
@@ -113,6 +132,7 @@ function createBookOrganizationService(dependencies) {
     validateNameInput(changes, kind);
     const record = await repository.update(id, changes);
     requireRecord(record, kind, id);
+    await recordLocalChange("update", kind.toLowerCase(), id, record);
     await recordEvent(`${kind.toLowerCase()}.update`, id);
     return record;
   }
@@ -126,12 +146,13 @@ function createBookOrganizationService(dependencies) {
   }
 
   async function deleteBook(bookId) {
-    await requireBook(bookId);
+    const book = await requireBook(bookId);
     const bookChapters = await chapters.listByBookId(bookId);
     for (const chapter of bookChapters) {
       await deleteChapter(chapter.id);
     }
     await entryBooks.detachBook(bookId);
+    await recordLocalChange("delete", "book", bookId, book);
     const deleted = await books.delete(bookId);
     if (!deleted) {
       throw new Error(`Book ${bookId} could not be deleted.`);
@@ -149,8 +170,9 @@ function createBookOrganizationService(dependencies) {
   }
 
   async function deleteChapter(chapterId) {
-    await requireChapter(chapterId);
+    const chapter = await requireChapter(chapterId);
     await entryChapters.detachChapter(chapterId);
+    await recordLocalChange("delete", "chapter", chapterId, chapter);
     const deleted = await chapters.delete(chapterId);
     if (!deleted) {
       throw new Error(`Chapter ${chapterId} could not be deleted.`);
@@ -162,6 +184,8 @@ function createBookOrganizationService(dependencies) {
     await requireEntry(entryId);
     requireRecord(await tags.findById(tagId), "Tag", tagId);
     await entryTags.add(entryId, tagId);
+    const resourceId = associationResourceId("entryTagAssociation", entryId, tagId);
+    await recordLocalChange("create", "entryTagAssociation", resourceId, { entryId, tagId });
     await recordEvent("entry.tag.add", entryId);
   }
 
@@ -169,6 +193,8 @@ function createBookOrganizationService(dependencies) {
     await requireEntry(entryId);
     requireRecord(await tags.findById(tagId), "Tag", tagId);
     await entryTags.remove(entryId, tagId);
+    const resourceId = associationResourceId("entryTagAssociation", entryId, tagId);
+    await recordLocalChange("delete", "entryTagAssociation", resourceId);
     await recordEvent("entry.tag.remove", entryId);
   }
 
@@ -176,6 +202,8 @@ function createBookOrganizationService(dependencies) {
     await requireEntry(entryId);
     await requireBook(bookId);
     await entryBooks.add(entryId, bookId, "direct");
+    const resourceId = associationResourceId("entryBookAssociation", entryId, bookId);
+    await recordLocalChange("create", "entryBookAssociation", resourceId, { entryId, bookId });
     await recordEvent("entry.book-association.add", entryId);
   }
 
@@ -183,6 +211,8 @@ function createBookOrganizationService(dependencies) {
     await requireEntry(entryId);
     await requireBook(bookId);
     await entryBooks.remove(entryId, bookId, "direct");
+    const resourceId = associationResourceId("entryBookAssociation", entryId, bookId);
+    await recordLocalChange("delete", "entryBookAssociation", resourceId);
     await recordEvent("entry.book-association.remove", entryId);
   }
 
@@ -192,6 +222,11 @@ function createBookOrganizationService(dependencies) {
     await requireBook(chapter.bookId);
     await entryChapters.add(entryId, chapterId);
     await entryBooks.add(entryId, chapter.bookId, "chapter-derived");
+    const resourceId = associationResourceId("entryChapterAssociation", entryId, chapterId);
+    await recordLocalChange("create", "entryChapterAssociation", resourceId, {
+      entryId,
+      chapterId,
+    });
     await recordEvent("entry.chapter-association.add", entryId);
   }
 
@@ -208,6 +243,8 @@ function createBookOrganizationService(dependencies) {
     if (!hasOtherChapterInBook) {
       await entryBooks.remove(entryId, chapter.bookId, "chapter-derived");
     }
+    const resourceId = associationResourceId("entryChapterAssociation", entryId, chapterId);
+    await recordLocalChange("delete", "entryChapterAssociation", resourceId);
     await recordEvent("entry.chapter-association.remove", entryId);
   }
 

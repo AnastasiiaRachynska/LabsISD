@@ -65,14 +65,16 @@ function createHarness() {
   const entries = createEntriesRepository();
   const entryLinks = createEntryLinksRepository();
   const auditLog = { record: jest.fn(async () => undefined) };
+  const pendingChanges = { enqueue: jest.fn(async () => undefined) };
   const { createEntryRelationshipService } = require("../src/wnt08/entry-relationships");
   const service = createEntryRelationshipService({
     entries,
     entryLinks,
+    pendingChanges,
     auditLog,
     now: () => new Date("2026-01-02T03:04:05.000Z"),
   });
-  return { service, entries, entryLinks, auditLog };
+  return { service, entries, entryLinks, auditLog, pendingChanges };
 }
 
 describe("WNT-08 SRS and acceptance-criteria traceability", () => {
@@ -121,13 +123,19 @@ describe("WNT-08 Entry links and safe deletion", () => {
   });
 
   test("[REQ-F-019, REQ-F-020] adds an unlabeled symmetric Entry Link without changing either Entry", async () => {
-    const { service, entries, entryLinks, auditLog } = createHarness();
+    const { service, entries, entryLinks, auditLog, pendingChanges } = createHarness();
     const firstEntryBefore = await entries.findById("entry-a");
     const secondEntryBefore = await entries.findById("entry-b");
 
     await service.addEntryLink("entry-a", "entry-b");
 
     expect(entryLinks.add).toHaveBeenCalledWith("entry-a", "entry-b");
+    expect(pendingChanges.enqueue).toHaveBeenCalledWith({
+      operation: "create",
+      resourceType: "entryLink",
+      resourceId: 'entryLink:["entry-a","entry-b"]',
+      payload: { entryIds: ["entry-a", "entry-b"] },
+    });
     expect(entryLinks.add.mock.calls[0]).toHaveLength(2);
     await expect(service.listLinkedEntries("entry-a")).resolves.toEqual([
       expect.objectContaining({ id: "entry-b" }),

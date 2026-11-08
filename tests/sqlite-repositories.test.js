@@ -455,6 +455,7 @@ describe("SQLite repositories", () => {
       "entry",
       "entry-1",
       "{}",
+      null,
     );
   });
 
@@ -470,6 +471,125 @@ describe("SQLite repositories", () => {
     await expect(repositories.syncMetadata.set("cursor", 12)).rejects.toThrow(
       "Sync metadata value must be a string.",
     );
+  });
+
+  test("removes only acknowledged queue IDs and rejects invalid acknowledgment lists", async () => {
+    const database = createDatabase();
+    const repositories = createSqliteRepositories(database);
+
+    await repositories.pendingChanges.removeAcknowledged([2, 5]);
+    expect(database.runAsync).toHaveBeenCalledWith(
+      "DELETE FROM pending_changes WHERE id IN (?, ?);",
+      2,
+      5,
+    );
+    database.runAsync.mockClear();
+    await repositories.pendingChanges.removeAcknowledged([]);
+    expect(database.runAsync).not.toHaveBeenCalled();
+    await expect(repositories.pendingChanges.removeAcknowledged([0])).rejects.toThrow();
+  });
+
+  test("coalesces local create/update work and cancels records deleted before synchronization", async () => {
+    const database = createDatabase();
+    database.getAllAsync
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: 1, operation: "create" }])
+      .mockResolvedValueOnce([{ id: 1, operation: "create" }]);
+    const repositories = createSqliteRepositories(database);
+
+    await repositories.pendingChanges.enqueue({
+      operation: "create",
+      resourceType: "entry",
+      resourceId: "entry-1",
+      payload: { content: "First" },
+    });
+    await repositories.pendingChanges.enqueue({
+      operation: "update",
+      resourceType: "entry",
+      resourceId: "entry-1",
+      payload: { content: "Latest" },
+    });
+    await repositories.pendingChanges.enqueue({
+      operation: "delete",
+      resourceType: "entry",
+      resourceId: "entry-1",
+    });
+
+    expect(database.runAsync).toHaveBeenCalledWith(
+      "UPDATE pending_changes SET payload = ? WHERE id = ?;",
+      JSON.stringify({ content: "Latest" }),
+      1,
+    );
+    expect(database.runAsync).toHaveBeenCalledWith(
+      "DELETE FROM pending_changes WHERE resource_type = ? AND resource_id = ?;",
+      "entry",
+      "entry-1",
+    );
+  });
+
+  test("coalesces repeated updates while retaining the last resource snapshot", async () => {
+    const database = createDatabase();
+    database.getAllAsync
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: 3, operation: "update" }]);
+    database.getFirstAsync.mockResolvedValue(null);
+    const repositories = createSqliteRepositories(database);
+
+    await repositories.pendingChanges.enqueue({
+      operation: "update",
+      resourceType: "entry",
+      resourceId: "entry-1",
+      payload: { content: "First update" },
+    });
+    await repositories.pendingChanges.enqueue({
+      operation: "update",
+      resourceType: "entry",
+      resourceId: "entry-1",
+      payload: { content: "Latest update" },
+    });
+
+    expect(database.runAsync).toHaveBeenCalledWith(
+      "UPDATE pending_changes SET payload = ?, base_version = ? WHERE id = ?;",
+      JSON.stringify({ content: "Latest update" }),
+      null,
+      3,
+    );
+  });
+
+  test("persists and retrieves both conflict versions", async () => {
+    const database = createDatabase();
+    const repositories = createSqliteRepositories(database);
+    const conflict = {
+      changeId: "change-1",
+      resourceType: "entry",
+      resourceId: "entry-1",
+      localVersion: { content: "local" },
+      serverVersion: { content: "server", version: 3 },
+    };
+    await repositories.conflicts.save(conflict);
+
+    expect(database.runAsync).toHaveBeenCalledWith(
+      expect.stringContaining("INSERT OR REPLACE INTO sync_conflicts"),
+      "change-1",
+      "entry",
+      "entry-1",
+      JSON.stringify(conflict.localVersion),
+      JSON.stringify(conflict.serverVersion),
+    );
+    database.getFirstAsync.mockResolvedValue({
+      change_id: "change-1",
+      resource_type: "entry",
+      resource_id: "entry-1",
+      local_version: JSON.stringify(conflict.localVersion),
+      server_version: JSON.stringify(conflict.serverVersion),
+    });
+    await expect(repositories.conflicts.findByChangeId("change-1")).resolves.toEqual(conflict);
+    await repositories.conflicts.remove("change-1");
+    expect(database.runAsync).toHaveBeenCalledWith(
+      "DELETE FROM sync_conflicts WHERE change_id = ?;",
+      "change-1",
+    );
+    await expect(repositories.conflicts.save(null)).rejects.toThrow();
   });
 
   test("records audit events and removes the oldest events over the size limit", async () => {

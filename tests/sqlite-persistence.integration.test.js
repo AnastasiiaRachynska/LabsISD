@@ -117,8 +117,8 @@ sqliteTest("persists application workflows in a real SQLite database", async () 
       content: "A local note",
       tags: [tag.id],
     });
-    expect(await reopenedApplication.repositories.pendingChanges.list()).toHaveLength(2);
-    expect(await reopenedApplication.repositories.auditLog.list()).toHaveLength(13);
+    expect(await reopenedApplication.repositories.pendingChanges.list()).toHaveLength(6);
+    expect(await reopenedApplication.repositories.auditLog.list()).toHaveLength(15);
     expect(await reopenedApplication.repositories.entryLinks.listForEntry(firstEntry.id)).toEqual(
       [],
     );
