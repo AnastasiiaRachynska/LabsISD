@@ -1,0 +1,15 @@
+WNT-06 test execution results
+
+Date: 2026-11-08
+
+Focused test run:
+- Command: npm test -- --runInBand tests/wnt-06-offline-note-capture.test.js
+- Result: 1 suite passed; 31 tests passed, 7 todo.
+
+Full test run:
+- Command: npm test -- --runInBand
+- Result: 2 suites passed; 33 tests passed, 7 todo.
+
+The 7 todo checks require the mobile application or platform harness and
+remain unverified. These results record test execution only; they do not
+supersede the pre-implementation red-phase decision in test-gate-WNT-06.txt.
