@@ -1,0 +1,36 @@
+END LOG - WNT-12 Offline Change Synchronization
+
+Date: 2026-11-08
+Status: Implementation complete; host TEST-GATE passed.
+
+Implementation:
+- Added injectable authenticated sync HTTP transport and client service for
+  OpenAPI push, pull, acknowledgments, Idempotency-Key retries, cursor handling,
+  and conflict resolution.
+- Extended the SQLite schema and repositories for versioned pending changes,
+  selective acknowledgment removal, sync conflict persistence, and stable
+  local/remote resource IDs.
+- Added transactional remote-resource/tombstone application and ensured cursor
+  persistence rolls back with failed local writes.
+- Wired local Entry, Book, Chapter, Tag, and relationship writes into the
+  durable outbox, including coalescing edits/deletes made before first sync.
+- Added synchronization completion/failure events to the existing audit log.
+- Updated the WNT-12 traceability rows and ticket gate/results logs.
+
+Verification:
+- Full suite: 16 suites passed; 200 passed; 9 todo.
+- Coverage: 92.34% statements and 86.15% branches; both gates >= 85%.
+- TypeScript check, changed-module syntax checks, diff whitespace check, and
+  Android/iOS Expo exports passed.
+- No files in mock-api or mock-api-tests were modified.
+- Detailed evidence: logs/test-results-WNT-12.txt.
+
+Remaining release integration:
+- App.tsx currently has no API base URL or authentication provider.
+  Supply a configured syncApi to createApplication before enabling production
+  synchronization.
+- No automatic connectivity scheduler, user-facing conflict UI, live backend,
+  or physical-device sync verification is present.
+
+Suggested commit:
+feat(wnt-12): implement offline synchronization
