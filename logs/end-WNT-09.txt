@@ -1,0 +1,46 @@
+WNT-09 ticket completion log
+
+Date: 2026-11-08
+Ticket: WNT-09 — Search and filters
+
+Implemented:
+- Added case-insensitive substring search across Entry Title, Content, and
+  generated Display Title.
+- Added Entry Type and Tag filters with strict AND behavior within and across
+  criteria.
+- Wired the search service into application composition using the Entries
+  repository, keeping search available against local persisted data.
+- Added service validation for malformed criteria and unsupported fields.
+- Updated the traceability matrix with WNT-09 test and implementation
+  references.
+
+Verification:
+- Focused command: npm test -- --runInBand
+  tests\wnt-09-search-and-filters.test.js
+  tests\wnt-09-search-persistence.integration.test.js
+  tests\create-application.test.js
+- Focused result: 3 suites passed; 20 tests passed; 1 platform-performance
+  test todo.
+- Full command: npm test -- --runInBand --coverage
+- Full result: 10 suites passed; 124 tests passed; 9 todo.
+- Global statement coverage: 95.58% (minimum: 85%).
+- Global branch coverage: 88.16% (minimum: 85%).
+- WNT-09 search module coverage: 100% statements and 97.43% branches.
+- Real-SQLite integration, `npx tsc --noEmit`, Android and iOS Expo exports,
+  JavaScript syntax checks, and `git diff --check` passed.
+
+Outstanding verification:
+- REQ-NF-002's 2-second search/filter target must still be measured with a
+  1,000-Entry SQLite fixture on an iOS 15+ simulator or Android 10+ emulator.
+  Host-machine tests are not claimed as evidence for this device-specific
+  requirement.
+- Nine tests remain todo across the project; see the individual test files
+  for their platform- and implementation-specific reasons.
+
+Logs:
+- Test-gate definition: logs/test-gate-WNT-09.txt (left unchanged).
+- Execution results: logs/test-results-WNT-09.txt.
+
+Status: WNT-09 search/filter behavior and persistence integration verified;
+device-specific performance criterion remains open.
+No commit was created.
