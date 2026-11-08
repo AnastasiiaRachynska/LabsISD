@@ -1,0 +1,29 @@
+WNT-06 ticket completion log
+
+Date: 2026-11-08
+Ticket: WNT-06 — offline Entry capture
+
+Completed:
+- Added the WNT-06 consumer-contract tests in
+  tests/wnt-06-offline-note-capture.test.js and mapped the covered
+  requirements and acceptance criteria to the traceability matrix.
+- Implemented src/wnt06/entry-capture.js for Entry creation, validation,
+  Display Title generation, retrieval, edits, offline change queueing, and
+  audit events.
+- Refactored shared title resolution, association validation, and change
+  recording logic.
+- Ran the initial expected-red test phase before implementation, followed by
+  green focused and full-suite verification.
+
+Verification:
+- Focused WNT-06 suite: 1 suite passed; 31 tests passed, 7 todo.
+- Full Jest suite: 2 suites passed; 33 tests passed, 7 todo.
+- The 7 todo tests require the mobile application or platform harness and
+  remain unverified. In particular, this module does not establish durable
+  expo-sqlite persistence, platform compatibility, performance, UI/accessibility
+  behavior, audit-log rotation, or the absence of diagnostic-log UI.
+- Detailed run results are recorded in logs/test-results-WNT-06.txt.
+- The original red-phase gate record remains in logs/test-gate-WNT-06.txt.
+
+Status: Implementation and currently executable tests are complete. Platform-
+dependent acceptance criteria remain open. No commit was created.
