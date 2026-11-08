@@ -1,0 +1,43 @@
+TEST-GATE — WNT-08 Entry links and safe detach
+
+Date: 2026-11-08
+Requirements: REQ-F-008, REQ-F-017–REQ-F-021, REQ-NF-005,
+  REQ-NF-006, REQ-NF-012
+Scope: Requirement traceability and consumer-contract/integration tests for
+  Entry deletion, symmetric Entry Links, safe Book/Chapter detachment, and
+  relationship integrity.
+
+Gate definition:
+- Consumer-contract test file:
+  tests/wnt-08-entry-links-and-deletion.test.js.
+- Real-SQLite integration coverage:
+  tests/sqlite-persistence.integration.test.js.
+- Traceability checks verify each of the 9 requirement/acceptance-criterion
+  pairs appears in the SRS and maps to WNT-08 in the traceability matrix.
+- Behavioral tests cover adding unlabeled symmetric links, both-side
+  visibility, self-link and missing-Entry rejection, removal from either
+  Entry, deletion of a linked Entry without deleting its peer, and audit
+  events with ISO-8601 UTC timestamps.
+- The SQLite integration test verifies deleting an Entry removes links and
+  dependent associations while preserving the other linked Entry.
+- Existing WNT-07 tests cover Book/Chapter detach behavior, including
+  preserving Entries and direct Book associations. The SQLite integration
+  test also exercises derived-association cleanup when a Chapter is deleted.
+- Commands:
+  npm test -- --runInBand tests\wnt-08-entry-links-and-deletion.test.js
+  npm test -- --runInBand tests\sqlite-persistence.integration.test.js
+- Gate criteria: all traceability and behavioral tests pass after
+  implementation; real-SQLite relationship cleanup passes on Node 22.5+.
+
+Boundary and assumptions:
+- The SRS does not prescribe a service API or repository method names. The
+  consumer tests define a modular `createEntryRelationshipService` contract
+  with `addEntryLink`, `removeEntryLink`, `listLinkedEntries`, and `deleteEntry`.
+- The persistence integration test expects the Entries repository to expose
+  `delete(id)` and rely on SQLite foreign-key cascades for dependent rows.
+- The integration test is skipped on Node versions below 22.5 because the
+  built-in `node:sqlite` API is unavailable.
+- No changes were made to mock-api-tests or mock-api.
+
+Execution: See logs/test-results-WNT-08.txt.
+Decision: RED — expected TDD phase; implementation and gate approval are pending.
