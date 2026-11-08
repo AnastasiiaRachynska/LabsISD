@@ -312,6 +312,23 @@ describe("WNT-07 Book and Chapter organization", () => {
     expect(entryBooks.remove).not.toHaveBeenCalledWith("entry-1", "book-1", "direct");
   });
 
+  test("[REQ-F-016, REQ-NF-005] keeps a derived Book Association while another Chapter in that Book remains", async () => {
+    const { service, chapters, entryChapters, entryBooks } = createHarness();
+    chapters.findById.mockImplementation(async (chapterId) => ({
+      id: chapterId,
+      bookId: "book-1",
+    }));
+    entryChapters.listForEntry.mockResolvedValue([{ id: "chapter-2" }]);
+
+    await service.removeChapterAssociation("entry-1", "chapter-1");
+
+    expect(entryBooks.remove).not.toHaveBeenCalledWith(
+      "entry-1",
+      "book-1",
+      "chapter-derived",
+    );
+  });
+
   test("[REQ-NF-012] records Book, Chapter, and association events in ISO-8601 UTC", async () => {
     const { service, auditLog } = createHarness();
 

@@ -97,29 +97,39 @@ function createBookOrganizationService(dependencies) {
     return requireRecord(await chapters.findById(chapterId), "Chapter", chapterId);
   }
 
+  async function createNamedRecord(repository, kind, input, additionalFields = {}) {
+    validateNameInput(input, kind);
+    const record = await repository.create({
+      id: createId(),
+      ...input,
+      ...additionalFields,
+    });
+    await recordEvent(`${kind.toLowerCase()}.create`, record.id);
+    return record;
+  }
+
+  async function updateNamedRecord(repository, kind, id, changes) {
+    await requireRecord(await repository.findById(id), kind, id);
+    validateNameInput(changes, kind);
+    const record = await repository.update(id, changes);
+    requireRecord(record, kind, id);
+    await recordEvent(`${kind.toLowerCase()}.update`, id);
+    return record;
+  }
+
   async function createBook(input) {
-    validateNameInput(input, "Book");
-    const book = await books.create({ id: createId(), name: input.name });
-    await recordEvent("book.create", book.id);
-    return book;
+    return createNamedRecord(books, "Book", input);
   }
 
   async function updateBook(bookId, changes) {
-    await requireBook(bookId);
-    validateNameInput(changes, "Book");
-    const book = await books.update(bookId, changes);
-    requireRecord(book, "Book", bookId);
-    await recordEvent("book.update", bookId);
-    return book;
+    return updateNamedRecord(books, "Book", bookId, changes);
   }
 
   async function deleteBook(bookId) {
     await requireBook(bookId);
     const bookChapters = await chapters.listByBookId(bookId);
     for (const chapter of bookChapters) {
-      await entryChapters.detachChapter(chapter.id);
-      await chapters.delete(chapter.id);
-      await recordEvent("chapter.delete", chapter.id);
+      await deleteChapter(chapter.id);
     }
     await entryBooks.detachBook(bookId);
     const deleted = await books.delete(bookId);
@@ -131,23 +141,11 @@ function createBookOrganizationService(dependencies) {
 
   async function createChapter(bookId, input) {
     await requireBook(bookId);
-    validateNameInput(input, "Chapter");
-    const chapter = await chapters.create({
-      id: createId(),
-      bookId,
-      name: input.name,
-    });
-    await recordEvent("chapter.create", chapter.id);
-    return chapter;
+    return createNamedRecord(chapters, "Chapter", input, { bookId });
   }
 
   async function updateChapter(chapterId, changes) {
-    await requireChapter(chapterId);
-    validateNameInput(changes, "Chapter");
-    const chapter = await chapters.update(chapterId, changes);
-    requireRecord(chapter, "Chapter", chapterId);
-    await recordEvent("chapter.update", chapterId);
-    return chapter;
+    return updateNamedRecord(chapters, "Chapter", chapterId, changes);
   }
 
   async function deleteChapter(chapterId) {
@@ -202,27 +200,30 @@ function createBookOrganizationService(dependencies) {
     const chapter = await requireChapter(chapterId);
     await entryChapters.remove(entryId, chapterId);
 
-    const [remainingChapters, bookAssociations] = await Promise.all([
-      entryChapters.listForEntry(entryId),
-      entryBooks.listForEntry(entryId),
-    ]);
-    const hasOtherChapterInBook = await Promise.all(
-      remainingChapters
-        .filter((association) => (association.chapterId || association.id) !== chapterId)
-        .map(async (association) => {
-          const otherChapterId = association.chapterId || association.id;
-          const otherChapter = await chapters.findById(otherChapterId);
-          return otherChapter && otherChapter.bookId === chapter.bookId;
-        }),
-    ).then((results) => results.some(Boolean));
-    const hasDirectBookAssociation = bookAssociations.some(
-      (association) => association.bookId === chapter.bookId && association.source === "direct",
+    const hasOtherChapterInBook = await hasChapterAssociationForBook(
+      entryId,
+      chapter.bookId,
+      chapterId,
     );
-
-    if (!hasOtherChapterInBook || hasDirectBookAssociation) {
+    if (!hasOtherChapterInBook) {
       await entryBooks.remove(entryId, chapter.bookId, "chapter-derived");
     }
     await recordEvent("entry.chapter-association.remove", entryId);
+  }
+
+  async function hasChapterAssociationForBook(entryId, bookId, excludedChapterId) {
+    const associations = await entryChapters.listForEntry(entryId);
+    for (const association of associations) {
+      const associatedChapterId = association.chapterId || association.id;
+      if (associatedChapterId === excludedChapterId) {
+        continue;
+      }
+      const associatedChapter = await chapters.findById(associatedChapterId);
+      if (associatedChapter && associatedChapter.bookId === bookId) {
+        return true;
+      }
+    }
+    return false;
   }
 
   async function listEntriesForBook(bookId) {
