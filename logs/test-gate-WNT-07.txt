@@ -1,0 +1,33 @@
+TEST-GATE — WNT-07 Book and Chapter organization
+
+Date: 2026-11-08
+Requirements: REQ-F-009, REQ-F-011–REQ-F-016, REQ-NF-005, REQ-NF-012
+Scope: Requirement traceability and consumer-contract tests for Tag assignment,
+  Book and Chapter management, Entry associations, relationship integrity,
+  and audit events.
+
+Gate definition:
+- Test file: tests/wnt-07-book-chapter-organization.test.js.
+- Traceability checks verify that each of the 9 requirement/acceptance-criterion
+  pairs appears in the SRS and maps to WNT-07 in the traceability matrix.
+- Behavioral tests cover Tag assignment/removal; Book and Chapter create,
+  retrieve, update, and delete workflows; direct and multiple Book
+  associations; Chapter associations and parent-Book derivation; detachment
+  without Entry deletion; and audit event timestamps.
+- The 2 MB FIFO audit-log rotation check is marked todo and requires the
+  device-local audit-log implementation.
+- Test command:
+  npm test -- --runInBand tests/wnt-07-book-chapter-organization.test.js
+- Gate criteria: traceability checks pass; after implementation, all
+  executable behavioral tests pass; platform/log-rotation checks remain
+  explicitly identified as unverified until their required implementation or
+  harness is available.
+
+Boundary and assumptions:
+- The SRS does not prescribe a service API, repository interface, or concrete
+  Book/Chapter field names. Tests assume createBookOrganizationService, a name
+  field, and explicit direct versus chapter-derived Book Association sources.
+- This gate does not assert platform behavior or audit-log size/rotation.
+
+Execution status: NOT RUN. No WNT-07 test result is claimed by this log.
+Decision: PENDING — run this gate as the red phase before implementing WNT-07.
