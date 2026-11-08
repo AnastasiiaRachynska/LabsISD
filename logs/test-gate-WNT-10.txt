@@ -1,0 +1,48 @@
+TEST-GATE - WNT-10 Export
+
+Date: 2026-11-08
+Requirements: REQ-F-026 through REQ-F-029, REQ-NF-003,
+  REQ-NF-010 through REQ-NF-012
+Scope: Requirement traceability and consumer-contract/integration tests for
+  local Entry and Book Project text export, UTF-8 preservation, chapter order,
+  duplicate suppression, storage failures, and export audit events.
+
+Gate definition:
+- Consumer-contract test file: tests/wnt-10-export.test.js.
+- Real SQLite and filesystem integration test:
+  tests/wnt-10-export.integration.test.js.
+- Traceability checks verify each of the 8 requirement/acceptance-criterion
+  pairs appears in the SRS and maps to WNT-10 in the traceability matrix.
+- Behavioral tests cover Entry Content export as .txt, representative
+  accented and non-Latin UTF-8 text, Book Project contents, Chapter ordering
+  by integer position when all Chapters provide it and by createdAt otherwise,
+  a General Book Notes section at the end, suppression of duplicate Entries
+  associated with both a Book and its Chapter, missing-resource errors,
+  storage-failure propagation, and ISO-8601 UTC export audit events.
+- The integration test uses real SQLite and a temporary host filesystem to
+  verify the persisted relationships produce the expected UTF-8 export.
+- This host integration does not prove Expo device-local file behavior.
+  Platform verification of the Expo filesystem adapter and user notification
+  on failure remains necessary when that adapter/UI is available.
+- Commands:
+  npm test -- --runInBand tests\wnt-10-export.test.js
+  tests\wnt-10-export.integration.test.js
+  npm test -- --runInBand --coverage
+- Gate criteria: traceability and behavioral tests pass after implementation;
+  real-SQLite/file integration passes on Node 22.5+; platform storage and
+  user-facing error behavior are reported separately if not yet available.
+
+Boundary and assumptions:
+- The SRS leaves export filename and text layout unspecified. The tests
+  require only a .txt filename, UTF-8 content, chapter headings, and the
+  specified General Book Notes section.
+- The tests define `createExportService` with `exportEntry(id)` and
+  `exportBook(id)`, repository dependencies, an atomic
+  `fileStorage.writeTextFile({ fileName, contents, encoding })` adapter,
+  `auditLog.record`, and a clock function.
+- Chapter positions are used when every Chapter has an integer `position`;
+  otherwise all Chapters fall back to ascending `createdAt`.
+- No changes were made to mock-api-tests or mock-api.
+
+Execution status: NOT RUN.
+Decision: PENDING - run tests as the red phase before implementing WNT-10.

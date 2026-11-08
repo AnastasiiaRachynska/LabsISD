@@ -1,0 +1,20 @@
+WNT-10 test execution results
+
+Date: 2026-11-08
+
+Consumer-contract and traceability tests:
+- Command: npm test -- --runInBand tests\wnt-10-export.test.js
+- Result: 1 suite failed; 8 traceability tests passed; 7 behavioral tests
+  failed because src/wnt10/export.js has not been implemented.
+
+SQLite/filesystem integration test:
+- Command: npm test -- --runInBand tests\wnt-10-export.integration.test.js
+- Result: 1 test failed because src/wnt10/export.js has not been implemented.
+  Real-SQLite Book Project export and UTF-8 filesystem output remain
+  unverified until implementation.
+
+Additional checks:
+- JavaScript syntax checks passed for both new test files.
+- git diff --check passed.
+- No production implementation or mock API files were changed; this is the
+  expected WNT-10 red phase.
