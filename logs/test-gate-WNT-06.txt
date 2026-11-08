@@ -1,0 +1,33 @@
+TEST-GATE — WNT-06 offline Entry capture
+
+Date: 2026-11-08
+Requirement: REQ-F-001–REQ-F-007, REQ-F-010; REQ-NF-001, REQ-NF-003,
+  REQ-NF-004, REQ-NF-007–REQ-NF-009, REQ-NF-012, REQ-NF-013
+Scope: SRS/acceptance-criteria traceability checks and consumer-contract tests
+  for offline Entry capture.
+
+Readiness evidence:
+- Separate test file: tests/wnt-06-offline-note-capture.test.js.
+- Traceability checks verify each of the 16 requirement/acceptance-criterion
+  pairs appears in the SRS and maps to WNT-06 in the traceability matrix.
+- Behavioral tests cover content validation, Display Title boundaries,
+  Entry Types, entry details and edits, standalone entries, offline queueing,
+  and audit timestamps.
+- Platform-dependent checks are marked todo because the application/platform
+  harness is not available at this stage.
+- Command: npm test -- --runInBand tests/wnt-06-offline-note-capture.test.js
+- Execution result: 1 suite failed; 15 tests failed, 16 passed, 7 todo.
+- The 16 passing tests are traceability checks. The behavioral tests fail to
+  load ../src/wnt06/entry-capture because the WNT-06 implementation does not
+  exist yet.
+- No production-code coverage result was collected by this test run.
+
+Boundary:
+- This is the expected red phase of the agreed TDD sequence, not evidence that
+  the WNT-06 implementation satisfies its acceptance criteria.
+- Behavioral contract assumptions, including the consumer module interface,
+  remain subject to confirmation before implementation.
+
+Decision: RED — expected before implementation. Traceability checks pass;
+behavioral acceptance criteria remain unverified until the implementation is
+written and the tests pass.
