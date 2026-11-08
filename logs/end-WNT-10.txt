@@ -1,0 +1,32 @@
+WNT-10 ticket completion log
+
+Date: 2026-11-08
+Ticket: WNT-10 — Entry and Book export
+
+Refactor:
+- Simplified Chapter ordering to select one comparator and sort once, while
+  preserving position-first ordering when all positions are integers and the
+  createdAt fallback otherwise.
+- Extracted Book association collection, associated Entry loading,
+  Entry-Chapter association loading, chapter grouping, and text formatting
+  into focused private helpers.
+- Reduced exportBook to orchestration of the same operations and retained its
+  prior failure behavior, export layout, duplicate suppression, and logging.
+- No production behavior or public service API was intentionally changed.
+
+Verification:
+- Baseline before refactor: 3 focused suites passed; 29 tests passed.
+- Focused after refactor:
+  npm test -- --runInBand tests\wnt-10-export.test.js
+  tests\wnt-10-export.integration.test.js
+  tests\wnt-10-expo-file-storage.test.js
+- Focused result: 3 suites passed; 29 tests passed.
+- Full command: npm test -- --runInBand --coverage
+- Full result: 13 suites passed; 153 tests passed; 9 existing tests are todo.
+- Global coverage: 95.59% statements and 87.13% branches (minimum: 85%).
+- WNT-10 exporter coverage: 94.44% statements and 79.71% branches.
+- `node --check src\wnt10\export.js`, `npx tsc --noEmit`, and
+  `git diff --check` passed.
+
+Status: WNT-10 refactoring is verified without breaking tests.
+No commit was created.
