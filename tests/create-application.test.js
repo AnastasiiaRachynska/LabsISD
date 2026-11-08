@@ -55,5 +55,10 @@ describe("application composition", () => {
         deleteEntry: expect.any(Function),
       }),
     );
+    expect(application.entrySearch).toEqual(
+      expect.objectContaining({
+        searchEntries: expect.any(Function),
+      }),
+    );
   });
 });

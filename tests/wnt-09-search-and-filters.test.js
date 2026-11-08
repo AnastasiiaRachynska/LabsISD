@@ -78,6 +78,43 @@ describe("WNT-09 SRS and acceptance-criteria traceability", () => {
 });
 
 describe("WNT-09 Entry search and combined filters", () => {
+  test("requires a repository with list and validates criteria", async () => {
+    const { createEntrySearchService } = require("../src/wnt09/entry-search");
+
+    expect(() => createEntrySearchService()).toThrow(
+      "Entry search requires a repository with a list method.",
+    );
+    expect(() => createEntrySearchService({ entries: {} })).toThrow(
+      "Entry search requires a repository with a list method.",
+    );
+
+    const { service } = createHarness();
+    await expect(service.searchEntries(null)).rejects.toThrow(
+      "Search criteria must be an object.",
+    );
+    await expect(service.searchEntries([])).rejects.toThrow(
+      "Search criteria must be an object.",
+    );
+    await expect(service.searchEntries({ query: 12 })).rejects.toThrow(
+      "Search query must be a string.",
+    );
+    await expect(service.searchEntries({ entryTypes: "Scene" })).rejects.toThrow(
+      "Entry Type filters must be an array of nonblank strings.",
+    );
+    await expect(service.searchEntries({ entryTypes: [" "] })).rejects.toThrow(
+      "Entry Type filters must be an array of nonblank strings.",
+    );
+    await expect(service.searchEntries({ tagIds: "tag-city" })).rejects.toThrow(
+      "Tag filters must be an array of nonblank strings.",
+    );
+    await expect(service.searchEntries({ tagIds: [" "] })).rejects.toThrow(
+      "Tag filters must be an array of nonblank strings.",
+    );
+    await expect(service.searchEntries({ type: "Scene" })).rejects.toThrow(
+      "Search criteria contain unsupported fields.",
+    );
+  });
+
   test("[REQ-F-022] searches Title and Content case-insensitively", async () => {
     const { service, repository } = createHarness();
 

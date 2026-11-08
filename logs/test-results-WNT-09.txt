@@ -1,0 +1,26 @@
+WNT-09 implementation test results
+
+Date: 2026-11-08
+
+Focused tests:
+- Command: npm test -- --runInBand tests\wnt-09-search-and-filters.test.js
+  tests\wnt-09-search-persistence.integration.test.js
+  tests\create-application.test.js
+- Result: 3 suites passed; 20 tests passed; 1 platform-performance test todo.
+- Real-SQLite integration passed for persisted Entries and Tag filters.
+
+Full test suite and coverage:
+- Command: npm test -- --runInBand --coverage
+- Result: 10 suites passed; 124 tests passed; 9 todo.
+- Global statement coverage: 95.58% (required: 85%).
+- Global branch coverage: 88.16% (required: 85%).
+- WNT-09 search module: 100% statement and 97.43% branch coverage.
+
+Additional verification:
+- `npx tsc --noEmit` passed.
+- Android and iOS Expo exports passed.
+- JavaScript syntax checks and `git diff --check` passed.
+- The 2-second search/filter latency criterion remains unverified: it requires
+  a 1,000-Entry SQLite fixture on an iOS 15+ simulator or Android 10+ emulator.
+
+No changes were made to mock-api-tests or mock-api.

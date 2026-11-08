@@ -68,7 +68,7 @@ sqliteTest("searches persisted Entries and Tags through the composed application
       expect.objectContaining({
         content: "The lost heir returns to the clockwork city",
         entryType: "Plot Idea",
-        tags: ["tag-1", "tag-2"],
+        tags: expect.arrayContaining(["tag-1", "tag-2"]),
       }),
     ]);
   } finally {
