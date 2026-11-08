@@ -29,15 +29,13 @@ function compareByCreatedAt(first, second) {
 
 function orderChapters(chapterRecords) {
   const chapters = [...chapterRecords];
-  if (chapters.length > 0 && chapters.every((chapter) => Number.isInteger(chapter.position))) {
-    chapters.sort(
-      (first, second) =>
-        first.position - second.position || compareByCreatedAt(first, second),
-    );
-    return chapters;
-  }
-  chapters.sort(compareByCreatedAt);
-  return chapters;
+  const hasPositions =
+    chapters.length > 0 && chapters.every((chapter) => Number.isInteger(chapter.position));
+  const compareChapters = hasPositions
+    ? (first, second) =>
+        first.position - second.position || compareByCreatedAt(first, second)
+    : compareByCreatedAt;
+  return chapters.sort(compareChapters);
 }
 
 function associationEntryId(association) {
@@ -51,6 +49,84 @@ function chapterAssociationId(association) {
     return association;
   }
   return association && (association.id || association.chapterId || association.chapter_id);
+}
+
+function collectBookEntryIds(bookAssociations) {
+  const entryIds = new Set();
+  const directEntryIds = new Set();
+  for (const association of bookAssociations) {
+    const entryId = associationEntryId(association);
+    entryIds.add(entryId);
+    if (association.source === "direct") {
+      directEntryIds.add(entryId);
+    }
+  }
+  return { entryIds, directEntryIds };
+}
+
+async function loadBookEntries(entryIds, bookId, entries) {
+  const records = await Promise.all(
+    [...entryIds].map(async (entryId) => {
+      const entry = await entries.findById(entryId);
+      if (!entry) {
+        throw new Error(`Entry ${entryId} associated with Book ${bookId} was not found.`);
+      }
+      if (typeof entry.content !== "string") {
+        throw new Error(`Entry ${entryId} has no exportable Content.`);
+      }
+      return [entryId, entry];
+    }),
+  );
+  return new Map(records);
+}
+
+async function loadEntryChapterAssociations(entryIds, entryChapters) {
+  const records = await Promise.all(
+    [...entryIds].map(async (entryId) => {
+      const associations = await entryChapters.listForEntry(entryId);
+      if (!Array.isArray(associations)) {
+        throw new TypeError("Entry-Chapters repository must return an array.");
+      }
+      return [entryId, associations];
+    }),
+  );
+  return new Map(records);
+}
+
+function groupEntriesByChapter(chapters, entryById, chapterAssociations) {
+  const chapterOrder = new Map(chapters.map((chapter, index) => [chapter.id, index]));
+  const chapterEntries = new Map(chapters.map((chapter) => [chapter.id, []]));
+  const placedEntryIds = new Set();
+
+  for (const [entryId, associations] of chapterAssociations) {
+    const chapterIds = associations
+      .map(chapterAssociationId)
+      .filter((chapterId) => chapterOrder.has(chapterId))
+      .sort((first, second) => chapterOrder.get(first) - chapterOrder.get(second));
+    const chapterId = chapterIds[0];
+    if (chapterId && !placedEntryIds.has(entryId)) {
+      chapterEntries.get(chapterId).push(entryById.get(entryId));
+      placedEntryIds.add(entryId);
+    }
+  }
+  return { chapterEntries, placedEntryIds };
+}
+
+function formatBookContents(book, chapters, chapterEntries, generalNotes) {
+  const sections = [`# ${book.name}`];
+  for (const chapter of chapters) {
+    const contents = chapterEntries
+      .get(chapter.id)
+      .map((entry) => entry.content)
+      .join("\n\n");
+    sections.push(`## ${chapter.name}${contents ? `\n\n${contents}` : ""}`);
+  }
+  if (generalNotes.length > 0) {
+    sections.push(
+      `## General Book Notes\n\n${generalNotes.map((entry) => entry.content).join("\n\n")}`,
+    );
+  }
+  return sections.join("\n\n");
 }
 
 function createExportService({
@@ -126,74 +202,23 @@ function createExportService({
     }
 
     const orderedChapters = orderChapters(chapterRecords);
-    const chapterById = new Map(orderedChapters.map((chapter) => [chapter.id, chapter]));
-    const chapterOrder = new Map(orderedChapters.map((chapter, index) => [chapter.id, index]));
-    const directEntryIds = new Set();
-    const entryIds = new Set();
-    for (const association of bookAssociations) {
-      const entryId = associationEntryId(association);
-      entryIds.add(entryId);
-      if (association.source === "direct") {
-        directEntryIds.add(entryId);
-      }
-    }
-
-    const loadedEntries = await Promise.all(
-      [...entryIds].map(async (entryId) => {
-        const entry = await entries.findById(entryId);
-        if (!entry) {
-          throw new Error(`Entry ${entryId} associated with Book ${bookId} was not found.`);
-        }
-        if (typeof entry.content !== "string") {
-          throw new Error(`Entry ${entryId} has no exportable Content.`);
-        }
-        return [entryId, entry];
-      }),
+    const { entryIds, directEntryIds } = collectBookEntryIds(bookAssociations);
+    const entryById = await loadBookEntries(entryIds, bookId, entries);
+    const chapterAssociations = await loadEntryChapterAssociations(entryIds, entryChapters);
+    const { chapterEntries, placedEntryIds } = groupEntriesByChapter(
+      orderedChapters,
+      entryById,
+      chapterAssociations,
     );
-    const entryById = new Map(loadedEntries);
-
-    const entryChapterRecords = await Promise.all(
-      [...entryIds].map(async (entryId) => {
-        const associations = await entryChapters.listForEntry(entryId);
-        if (!Array.isArray(associations)) {
-          throw new TypeError("Entry-Chapters repository must return an array.");
-        }
-        return [entryId, associations];
-      }),
-    );
-
-    const chapterEntries = new Map(orderedChapters.map((chapter) => [chapter.id, []]));
-    const placedEntryIds = new Set();
-    for (const [entryId, associations] of entryChapterRecords) {
-      const associatedChapterIds = associations
-        .map(chapterAssociationId)
-        .filter((chapterId) => chapterById.has(chapterId))
-        .sort((first, second) => chapterOrder.get(first) - chapterOrder.get(second));
-      const firstChapterId = associatedChapterIds[0];
-      if (firstChapterId && !placedEntryIds.has(entryId)) {
-        chapterEntries.get(firstChapterId).push(entryById.get(entryId));
-        placedEntryIds.add(entryId);
-      }
-    }
-
     const generalNotes = [...directEntryIds]
       .filter((entryId) => !placedEntryIds.has(entryId))
       .map((entryId) => entryById.get(entryId));
-    const sections = [`# ${book.name}`];
-    for (const chapter of orderedChapters) {
-      const chapterContents = chapterEntries
-        .get(chapter.id)
-        .map((entry) => entry.content)
-        .join("\n\n");
-      sections.push(`## ${chapter.name}${chapterContents ? `\n\n${chapterContents}` : ""}`);
-    }
-    if (generalNotes.length > 0) {
-      sections.push(
-        `## General Book Notes\n\n${generalNotes.map((entry) => entry.content).join("\n\n")}`,
-      );
-    }
 
-    return saveExport("book", bookId, sections.join("\n\n"));
+    return saveExport(
+      "book",
+      bookId,
+      formatBookContents(book, orderedChapters, chapterEntries, generalNotes),
+    );
   }
 
   return {
