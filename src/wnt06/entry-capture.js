@@ -49,8 +49,12 @@ function deriveDisplayTitle(content) {
   return first25Characters;
 }
 
-function resolveDisplayTitle(content, title) {
-  return isNonblankString(title) ? title : deriveDisplayTitle(content);
+function resolveTitle(content, title) {
+  const explicitTitle = isNonblankString(title) ? title : null;
+  return {
+    title: explicitTitle,
+    displayTitle: explicitTitle || deriveDisplayTitle(content),
+  };
 }
 
 function defaultToEmptyArray(value) {
@@ -104,15 +108,13 @@ function createEntryCaptureService({ entries, pendingChanges, auditLog, createId
     }
     validateContent(input.content);
 
-    const title = isNonblankString(input.title) ? input.title : null;
     const entryType = input.entryType === undefined ? "General Note" : input.entryType;
     validateEntryType(entryType);
 
     const entry = {
       id: createId(),
       content: input.content,
-      title,
-      displayTitle: resolveDisplayTitle(input.content, title),
+      ...resolveTitle(input.content, input.title),
       entryType,
       tags: defaultToEmptyArray(input.tags),
       bookAssociations: defaultToEmptyArray(input.bookAssociations),
@@ -160,14 +162,11 @@ function createEntryCaptureService({ entries, pendingChanges, auditLog, createId
     }
 
     const updatedFields = { ...changes };
-    if (hasOwn(updatedFields, "title")) {
-      updatedFields.title = isNonblankString(updatedFields.title) ? updatedFields.title : null;
-    }
     const updatedContent = updatedFields.content ?? existing.content;
     const updatedTitle = hasOwn(updatedFields, "title")
       ? updatedFields.title
       : existing.title;
-    updatedFields.displayTitle = resolveDisplayTitle(updatedContent, updatedTitle);
+    Object.assign(updatedFields, resolveTitle(updatedContent, updatedTitle));
 
     const updatedEntry = await entries.update(id, updatedFields);
     if (!updatedEntry) {
