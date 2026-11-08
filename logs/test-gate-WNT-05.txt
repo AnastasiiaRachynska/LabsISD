@@ -1,0 +1,40 @@
+TEST-GATE — WNT-05 Jest test environment readiness
+
+Date: 2026-11-08
+Requirement: REQ-NF-014 / AC-NF-014
+Scope: Jest unit/integration runner and statement/branch coverage enforcement.
+
+Agent interaction summary:
+- Prompt: establish Jest unit/integration testing, enforce at least 85% statement
+  and branch coverage, and complete TEST-GATE readiness.
+- Decisions: pin Jest; use its Node environment; limit production coverage to
+  src/ and exclude config/declaration files; use the existing API mock only for
+  integration smoke testing, not as production coverage.
+- Trade-off: product implementation is absent, so current coverage must not be
+  represented as product coverage.
+
+Readiness evidence:
+- Jest runs the repository test suite with the Node test environment.
+- Infrastructure unit tests verify the 85% global statement and branch
+  thresholds and the configured production-source coverage scope.
+- An integration test starts the existing stateful mock API on a free local
+  port and checks an authenticated request and an unauthenticated rejection.
+- `npm test -- --coverage` is the specified coverage command; reports are
+  written to `coverage/`.
+- Execution result: 2 suites and 4 tests passed. Jest emitted 0% source
+  coverage because no production files exist under `src/`; this is not product
+  coverage evidence.
+- Dependency audit found 19 low/moderate findings in Jest's development
+  dependency tree. `npm audit fix` could not resolve them without a breaking
+  downgrade of Jest; no force downgrade was applied.
+- `npm audit --omit=dev` reported no production dependency vulnerabilities.
+
+Boundary:
+- At this ticket, `src/` has no production modules. The infrastructure and mock
+  integration tests do not represent client or backend product-code coverage.
+  Therefore this gate establishes test-environment readiness only; it does not
+  claim AC-NF-014 product coverage is met. Product coverage remains unmeasured
+  until the covered modules are implemented.
+
+Decision: READY WITH SCOPE LIMITATION — test infrastructure is prepared for
+WNT-06 onward; product coverage acceptance remains open.

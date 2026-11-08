@@ -88,7 +88,7 @@ REQ-NF-010 & AC-NF-010 & S9: Export Success and Failure & \texttt{WNT-02}, \text
 REQ-NF-011 & AC-NF-011 & S9: Export Success and Failure & \texttt{WNT-02}, \texttt{WNT-10} & & & \\ \hline
 REQ-NF-012 & AC-NF-012 & NFR verification: ISO-8601 UTC timestamps and 2 MB FIFO log rotation & \texttt{WNT-06}, \texttt{WNT-07}, \texttt{WNT-08}, \texttt{WNT-10} & & & \\ \hline
 REQ-NF-013 & AC-NF-013 & NFR verification: confirm no user-facing diagnostic-log UI & \texttt{WNT-06} & & & \\ \hline
-REQ-NF-014 & AC-NF-014 & NFR verification: TDD evidence and Jest statement/branch coverage thresholds for client and backend components & \texttt{WNT-05} & & & \\ \hline
+REQ-NF-014 & AC-NF-014 & NFR verification: TDD evidence and Jest statement/branch coverage thresholds for client and backend components & \texttt{WNT-05} & \texttt{tests/infrastructure/jest-config.test.js}; product coverage pending source modules & Jest coverage gate in \texttt{jest.config.js} & \texttt{docs/testing.md}; \texttt{logs/test-gate.txt} \\ \hline
 REQ-NF-015 & AC-NF-015 & NFR verification: inspect HTTPS transport, JSON payloads, versioned REST paths, HTTP methods, and response status codes & \texttt{WNT-01}, \texttt{WNT-11}, \texttt{WNT-12} & Redocly validates the OpenAPI contract only; HTTPS/wire behavior is not verified by the HTTP localhost mock & Test mock uses HTTP only; not HTTPS evidence & \texttt{spec/openapi.yaml}; \texttt{logs/api-gate.txt} \\ \hline
 \end{longtable}
 
