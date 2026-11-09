@@ -86,6 +86,41 @@ afterEach(async () => {
 });
 
 describe("WNT-11 SQLite-backed API implementation", () => {
+  test("serves a minimal public API liveness response without credentials", async () => {
+    const result = await request("/api/v1/health", { token: null });
+
+    expect(result.response.status).toBe(200);
+    expect(result.response.headers.get("content-type")).toContain("application/json");
+    expect(result.data).toEqual({ status: "ok" });
+    expect(JSON.stringify(result.data)).not.toMatch(/secret|database|credential|user/i);
+    expect(result.response.headers.get("x-request-id")).toBeTruthy();
+    expect(logEvents).toContainEqual(expect.objectContaining({
+      event: "http.request.completed",
+      method: "GET",
+      path: "/api/v1/health",
+      status: 200,
+      userId: null,
+    }));
+  });
+
+  test("rejects unsupported methods on the public health endpoint", async () => {
+    const result = await request("/api/v1/health", {
+      method: "POST",
+      token: null,
+    });
+
+    expect(result.response.status).toBe(405);
+    expect(result.response.headers.get("allow")).toBe("GET");
+    expectProblem(result, 405, "METHOD_NOT_ALLOWED");
+    expect(logEvents).toContainEqual(expect.objectContaining({
+      event: "http.request.completed",
+      method: "POST",
+      path: "/api/v1/health",
+      status: 405,
+      userId: null,
+    }));
+  });
+
   test("validates server configuration, creates persistent database folders, and cleans failed starts", async () => {
     await expect(startApiServer({
       databasePath: ":memory:",
