@@ -1,0 +1,19 @@
+TICKET PROPOSAL — WNT-18 API Liveness Endpoint
+
+Status: Approved through SPEC-ADDENDUM-GATE; implementation authorized.
+
+Goal:
+- Add a public GET /api/v1/health endpoint that confirms the API process is
+  responding, without implying database readiness.
+
+Specification:
+- Requirement: REQ-F-040 — API liveness.
+- Acceptance criterion: AC-F-040 — unauthenticated GET returns HTTP 200,
+  application/json, and exactly {"status":"ok"}; non-GET returns 405 and
+  Allow: GET; no secrets or infrastructure details are disclosed.
+- Full proposal: spec/addendum-03-api-health-endpoint.md.
+
+Dependencies and exclusions:
+- Addendum 03 approval dependency is satisfied.
+- Does not change mobile UI, authentication, resource CRUD, or sync behavior.
+- No schedule dates assigned; project-owner scheduling is required.

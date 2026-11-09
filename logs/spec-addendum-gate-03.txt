@@ -1,0 +1,41 @@
+SPEC-ADDENDUM-GATE — Addendum 03: API Health Endpoint
+
+Related ticket: WNT-18
+Decision status: APPROVED.
+
+Gate review:
+1. Substantive change — PASS.
+   The existing API has no public process-liveness operation. The proposal
+   adds a small operational capability without expanding domain data behavior.
+
+2. Requirement clarity and testability — PASS.
+   REQ-F-040 specifies method, path, authentication behavior, status, response
+   representation, and explicit liveness-only semantics. AC-F-040 defines
+   observable positive and negative HTTP behavior.
+
+3. Architecture and compatibility — PASS.
+   The endpoint is additive, has no impact on current clients, and does not
+   alter resource, authentication, or synchronization contracts.
+
+4. Security and privacy — PASS WITH IMPLEMENTATION CONDITION.
+   The response is static and contains no sensitive information. The endpoint
+   is intentionally unauthenticated. The implementation must not expose
+   configuration, database diagnostics, user data, or secrets.
+
+5. Artifact impact — PASS.
+   The OpenAPI draft includes the new operation and response schema. Backend
+   route, tests, and traceability updates are identified for WNT-18. Schedule
+   dates remain unassigned pending owner scheduling.
+
+6. OpenAPI consistency — PASS.
+   GET /api/v1/health is explicitly public and returns the static
+   HealthResponse.
+   No existing operations or schemas are changed.
+
+Gate recommendation:
+- Recommend accepting Addendum 03 and authorizing WNT-18 implementation.
+
+Owner disposition:
+- Approved Addendum 03 and authorized WNT-18 after requesting the route be
+  changed from /health to /api/v1/health.
+- The route revision is reflected in the addendum, ticket, and OpenAPI contract.

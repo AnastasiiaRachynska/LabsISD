@@ -4,9 +4,10 @@ info:
   version: 1.0.0
   summary: REST API for managing creative writing resources and synchronization.
   description: |
-    OpenAPI contract for functional requirements REQ-F-030 through REQ-F-039.
+    OpenAPI contract for functional requirements REQ-F-030 through REQ-F-040.
     Chapter paths follow Addendum 01 and are nested below their parent Book.
     Authentication and user-scoped isolation follow Addendum 02.
+    The public process-liveness operation follows Addendum 03.
 
     Protected resource, relationship, profile, and sync operations require a
     valid bearer access token. The server derives ownership from the verified
@@ -30,12 +31,15 @@ info:
     - REQ-F-037
     - REQ-F-038
     - REQ-F-039
+    - REQ-F-040
 servers:
   - url: /
-    description: Host-relative base path; each operation path includes the /api/v1 prefix.
+    description: Host-relative base path; all operations use the /api/v1 prefix.
 tags:
   - name: Authentication
     description: Registration, login, token refresh, and current-user profile.
+  - name: Health
+    description: Public API process-liveness check.
   - name: Entries
     description: Creative idea entries.
   - name: Books
@@ -54,6 +58,41 @@ security:
   - bearerAuth: []
 
 paths:
+  /api/v1/health:
+    get:
+      operationId: getHealth
+      tags: [Health]
+      summary: Check API process liveness
+      description: |
+        Returns a static liveness response when the API process can handle the
+        request. This operation does not check SQLite or other dependency
+        readiness and discloses no deployment or user details.
+      x-requirement-ids: [REQ-F-040]
+      security: []
+      responses:
+        '200':
+          description: The API process is responding.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: ok
+        '405':
+          description: The HTTP method is not supported; only GET is allowed.
+          headers:
+            Allow:
+              description: Supported HTTP method.
+              schema:
+                type: string
+                const: GET
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
   /api/v1/auth/register:
     post:
       operationId: registerAccount
@@ -1639,6 +1678,15 @@ components:
       example: /api/v1/entries/entry-123
 
   schemas:
+    HealthResponse:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status:
+          type: string
+          const: ok
+
     EntryType:
       type: string
       enum:
