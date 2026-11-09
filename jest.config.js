@@ -7,6 +7,7 @@ module.exports = {
     "src/**/*.{js,cjs,mjs}",
     "!src/**/*.config.js",
     "!src/**/*.d.ts",
+    "!src/wnt11/cli.js",
   ],
   coverageDirectory: "coverage",
   coverageReporters: ["text", "lcov", "json-summary"],

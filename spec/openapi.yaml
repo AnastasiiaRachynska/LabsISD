@@ -2178,7 +2178,7 @@ components:
     SyncCreateChange:
       type: object
       additionalProperties: false
-      required: [changeId, resourceType, operation, resource]
+      required: [changeId, resourceType, operation, clientResourceId, resource]
       properties:
         changeId:
           type: string
@@ -2188,6 +2188,10 @@ components:
         operation:
           type: string
           const: create
+        clientResourceId:
+          type: string
+          minLength: 1
+          description: Client-side resource identifier used to map references to the server ID.
         resource:
           type: object
           description: Resource representation must match resourceType.
