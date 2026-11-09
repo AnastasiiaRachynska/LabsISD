@@ -598,6 +598,18 @@ function createSqliteRepositories(database, { now = () => new Date() } = {}) {
         JSON.stringify(conflict.serverVersion),
       );
     },
+    async list() {
+      const rows = await database.getAllAsync(
+        "SELECT * FROM sync_conflicts ORDER BY change_id;",
+      );
+      return rows.map((row) => ({
+        changeId: row.change_id,
+        resourceType: row.resource_type,
+        resourceId: row.resource_id,
+        localVersion: JSON.parse(row.local_version),
+        serverVersion: JSON.parse(row.server_version),
+      }));
+    },
     async findByChangeId(changeId) {
       requireNonblankString(changeId, "Conflict change ID");
       const row = await database.getFirstAsync(

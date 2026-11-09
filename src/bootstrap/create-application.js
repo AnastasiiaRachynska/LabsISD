@@ -16,6 +16,10 @@ const { createSqliteSyncStore } = require("./sqlite-sync-store");
  * @param {() => Promise<import("expo-sqlite").SQLiteDatabase>} options.openDatabase
  * @param {() => string} options.createId
  * @param {() => Date} [options.now]
+ * @param {{
+ *   pushChanges: (payload: object, options: { idempotencyKey: string }) => Promise<{ status: number, body?: object }>,
+ *   pullChanges: (cursor?: string | null) => Promise<{ status: number, body?: object }>
+ * }} [options.syncApi]
  */
 async function createApplication({
   openDatabase,
