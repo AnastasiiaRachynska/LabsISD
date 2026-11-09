@@ -1485,6 +1485,15 @@ function createApiServer({
     void (async () => {
       try {
         const url = new URL(request.url, "http://localhost");
+        if (url.pathname === "/api/v1/health") {
+          if (request.method !== "GET") {
+            methodNotAllowed(response, ["GET"]);
+            return;
+          }
+          sendJson(response, 200, { status: "ok" });
+          return;
+        }
+
         const authPaths = [
           "/api/v1/auth/register",
           "/api/v1/auth/login",
