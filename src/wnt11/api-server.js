@@ -1280,6 +1280,14 @@ async function hashPassword(password, salt) {
   return derived.toString("hex");
 }
 
+function handleHealth(request, response) {
+  if (request.method !== "GET") {
+    methodNotAllowed(response, ["GET"]);
+    return;
+  }
+  sendJson(response, 200, { status: "ok" });
+}
+
 async function handleAuthentication(database, request, response, url, options) {
   const { secret, now } = options;
   if (url.pathname === "/api/v1/auth/register") {
@@ -1486,11 +1494,7 @@ function createApiServer({
       try {
         const url = new URL(request.url, "http://localhost");
         if (url.pathname === "/api/v1/health") {
-          if (request.method !== "GET") {
-            methodNotAllowed(response, ["GET"]);
-            return;
-          }
-          sendJson(response, 200, { status: "ok" });
+          handleHealth(request, response);
           return;
         }
 
