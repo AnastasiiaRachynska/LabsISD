@@ -1,6 +1,7 @@
 TICKET PROPOSAL — WNT-18 API Liveness Endpoint
 
-Status: Approved through SPEC-ADDENDUM-GATE; implementation authorized.
+Status: Implemented and verified; SPEC-ADDENDUM-GATE approved, TEST-GATE GO
+received, and implementation verification passed.
 
 Goal:
 - Add a public GET /api/v1/health endpoint that confirms the API process is
@@ -17,3 +18,11 @@ Dependencies and exclusions:
 - Addendum 03 approval dependency is satisfied.
 - Does not change mobile UI, authentication, resource CRUD, or sync behavior.
 - No schedule dates assigned; project-owner scheduling is required.
+
+Verification:
+- Focused WNT-11 integration suite: 15 tests passed.
+- Full Jest suite with coverage: 19 suites passed, 234 tests passed, 9 todo.
+- Coverage: 92.06% statements and 85.25% branches.
+- Red-phase gate evidence: logs/test-gate-WNT-18.txt.
+- Green-phase implementation and regression results:
+  logs/test-results-WNT-18.txt.

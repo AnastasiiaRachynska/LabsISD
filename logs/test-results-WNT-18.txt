@@ -1,0 +1,25 @@
+WNT-18 IMPLEMENTATION AND TEST RESULTS
+
+TEST-GATE disposition:
+- GO received after the red phase. See logs/test-gate-WNT-18.txt.
+
+Implementation:
+- Added /api/v1/health handling before bearer authentication in
+  src/wnt11/api-server.js.
+- GET returns only {"status":"ok"} via the normal JSON response helper.
+- Other methods use the existing 405 helper with Allow: GET.
+- The route does not query SQLite. Existing request ID and completion logging
+  remain active.
+
+Verification:
+- Focused command:
+  npm test -- --runInBand tests\wnt-11-backend.test.js
+  Result: 1 suite passed; 15 tests passed.
+- Full regression command:
+  npm test -- --runInBand --coverage
+  Result: 19 suites passed; 234 tests passed; 9 todo; 0 failed.
+  Coverage: 92.06% statements and 85.25% branches; both exceed the 85%
+  configured thresholds.
+- git diff --check passed.
+
+Implementation verification: PASS.
