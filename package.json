@@ -5,6 +5,7 @@
   "main": "node_modules/expo/AppEntry.js",
   "scripts": {
     "test": "jest",
+    "start:api": "node src/wnt11/cli.js",
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios"
@@ -13,6 +14,7 @@
     "expo": "~54.0.38",
     "expo-crypto": "~15.0.9",
     "expo-file-system": "~19.0.24",
+    "expo-secure-store": "~15.0.8",
     "expo-sqlite": "~16.0.10",
     "expo-status-bar": "~3.0.9",
     "react": "19.1.0",

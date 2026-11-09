@@ -165,7 +165,9 @@ async function toOutboundChange(change, syncMetadata, localStore) {
     resourceType: change.resourceType,
     operation: change.operation,
   };
-  if (change.operation !== "create") {
+  if (change.operation === "create") {
+    outbound.clientResourceId = change.resourceId;
+  } else {
     let baseVersion = change.baseVersion ?? change.payload?.version;
     if (baseVersion === undefined) {
       const savedVersion = await syncMetadata.get(

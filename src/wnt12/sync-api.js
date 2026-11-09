@@ -1,7 +1,18 @@
 "use strict";
 
-function createSyncApi({ baseUrl, getAccessToken, fetchImpl = globalThis.fetch } = {}) {
-  if (typeof baseUrl !== "string" || baseUrl.trim().length === 0) {
+/**
+ * @param {{
+ *   baseUrl?: string,
+ *   getBaseUrl?: () => string | Promise<string>,
+ *   getAccessToken: () => string | Promise<string>,
+ *   fetchImpl?: typeof fetch
+ * }} options
+ */
+function createSyncApi({ baseUrl, getBaseUrl, getAccessToken, fetchImpl = globalThis.fetch } = {}) {
+  if (
+    (typeof baseUrl !== "string" || baseUrl.trim().length === 0) &&
+    typeof getBaseUrl !== "function"
+  ) {
     throw new TypeError("Sync API requires a nonblank base URL.");
   }
   if (typeof getAccessToken !== "function") {
@@ -10,13 +21,16 @@ function createSyncApi({ baseUrl, getAccessToken, fetchImpl = globalThis.fetch }
   if (typeof fetchImpl !== "function") {
     throw new TypeError("Sync API requires a fetch implementation.");
   }
-  const root = baseUrl.replace(/\/+$/, "");
-
   async function request(path, options = {}) {
+    const configuredBaseUrl = typeof getBaseUrl === "function" ? await getBaseUrl() : baseUrl;
+    if (typeof configuredBaseUrl !== "string" || configuredBaseUrl.trim().length === 0) {
+      throw new Error("Synchronization requires a configured API base URL.");
+    }
     const token = await getAccessToken();
     if (typeof token !== "string" || token.trim().length === 0) {
       throw new Error("Synchronization requires a valid access token.");
     }
+    const root = configuredBaseUrl.replace(/\/+$/, "");
     const response = await fetchImpl(`${root}/api/v1/sync/${path}`, {
       ...options,
       headers: {

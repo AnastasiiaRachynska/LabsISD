@@ -9,6 +9,9 @@
     "platforms": [
       "ios",
       "android"
+    ],
+    "plugins": [
+      "expo-secure-store"
     ]
   }
 }
