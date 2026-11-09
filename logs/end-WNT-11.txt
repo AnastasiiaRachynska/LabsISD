@@ -1,0 +1,37 @@
+END LOG - WNT-11 Production API Resource Management
+
+Date: 2026-11-09
+Status: Implementation complete; host TEST-GATE passed.
+
+Implemented:
+- Added a standalone Node.js REST API with persistent SQLite storage for
+  Entries, Books, nested Chapters, Tags, associations, and symmetric Entry
+  Links.
+- Added account registration, scrypt password hashing, signed bearer access
+  tokens, rotating persisted refresh tokens, and user-scoped access controls.
+- Added conditional resource updates/deletes, ETags, response schemas,
+  pagination, association filtering, and problem+json errors.
+- Added authenticated sync push/pull, idempotent retries, version conflicts,
+  signed cursors, and change journaling.
+- Added request IDs and structured request-completion logs.
+- Added production API integration tests and updated WNT-11 traceability and
+  gate/results logs. Existing mock API tests remain unchanged.
+
+Verification:
+- WNT-11 production API integration: 13 tests passed.
+- WNT-11 mock regression: 16 tests passed.
+- App/server sync round trip passed with separate client and server SQLite DBs.
+- Full Jest: 19 suites passed; 232 passed; 9 todo.
+- Coverage: 92.04% statements and 85.21% branches (both exceed 85%).
+- Syntax and whitespace checks passed.
+
+Limitations:
+- Run the backend using Node.js 22.5 or later, API_JWT_SECRET, and npm run
+  start:api. API_DATABASE_PATH, HOST, and PORT are configurable.
+- App.tsx now supports secure credentials, a configurable API URL, and manual
+  synchronization through this API.
+- HTTPS deployment, production hosting, and physical-device network validation
+  remain separate release work.
+
+Suggested commit:
+feat(wnt-11): implement SQLite-backed resource API

@@ -1,0 +1,47 @@
+All-ticket Jest execution report
+
+Date: 2026-11-09
+
+Command:
+- npm test -- --runInBand --coverage
+
+Result:
+- PASS: all 19 discovered Jest suites passed.
+- 232 tests passed; 9 tests are marked todo; 241 total.
+- No failed or skipped suites.
+- Statement coverage: 92.04% (minimum: 85%).
+- Branch coverage: 85.21% (minimum: 85%).
+- Function coverage: 98.00%.
+- Line coverage: 92.07%.
+
+Suites executed:
+- tests/create-application.test.js
+- tests/infrastructure/jest-config.test.js
+- tests/local-database.test.js
+- tests/sqlite-persistence.integration.test.js
+- tests/sqlite-repositories.test.js
+- tests/wnt-06-offline-note-capture.test.js
+- tests/wnt-07-book-chapter-organization.test.js
+- tests/wnt-08-entry-links-and-deletion.test.js
+- tests/wnt-09-search-and-filters.test.js
+- tests/wnt-09-search-persistence.integration.test.js
+- tests/wnt-10-expo-file-storage.test.js
+- tests/wnt-10-export.integration.test.js
+- tests/wnt-10-export.test.js
+- tests/wnt-11-api-resource-management.test.js
+- tests/wnt-11-backend.test.js
+- tests/wnt-12-api-session.test.js
+- tests/wnt-12-app-sync.integration.test.js
+- tests/wnt-12-sqlite-sync.integration.test.js
+- tests/wnt-12-synchronization.test.js
+
+Notes:
+- Jest discovers tests/**/*.test.js; the full run includes the WNT-06 through
+  WNT-12 ticket suites and the shared persistence/application suites.
+- The nine todo tests remain pending requirements/platform verifications; their
+  existing todo status is not a test failure.
+- The run emitted Node's ExperimentalWarning for node:sqlite. SQLite-backed
+  integration suites ran successfully in the current Node.js 25.1.0 runtime.
+- The repository's configured global statement and branch coverage thresholds
+  were both met. Strict TypeScript checking, Android/iOS Expo exports, and
+  git diff --check also passed for the app integration update.

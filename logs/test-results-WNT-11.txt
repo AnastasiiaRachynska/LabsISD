@@ -1,0 +1,48 @@
+WNT-11 implementation and test results
+
+Date: 2026-11-09
+
+Production API implementation:
+- Added a standalone Node.js HTTP API in src/wnt11 with persistent SQLite
+  resource storage and a start:api script.
+- Implemented Entry, Book, nested Chapter, Tag, Entry-Tag, Entry-Book,
+  Entry-Chapter, and symmetric Entry Link operations from the OpenAPI contract.
+- Implemented versioned resources with ETags and If-Match preconditions,
+  pagination, filters, problem responses, bearer access tokens, password
+  hashing, rotating refresh tokens, and per-user resource ownership.
+- Implemented sync push/pull with a change journal, version conflicts,
+  idempotency, signed user-bound cursors, and resource ID mappings.
+- Added request IDs and structured completion logs without logging request
+  bodies, credentials, or access tokens.
+- Updated WNT-11 traceability rows to reference the production implementation
+  and integration tests.
+
+Acceptance tests:
+- Command: npm test -- --runInBand tests\wnt-11-backend.test.js
+- Result: 1 suite passed; 13 tests passed.
+- Command: npm test -- --runInBand tests\wnt-11-api-resource-management.test.js
+- Result: 1 suite passed; 16 mock acceptance tests passed.
+- The production tests use real temporary SQLite databases, exercise persistence
+  across server restart, and cover positive, negative, and boundary scenarios.
+- Sync tests cover all relationship resource types, validation, idempotency,
+  optimistic conflicts, cursor isolation, and tombstones.
+- tests/wnt-12-app-sync.integration.test.js verifies authenticated app-client
+  interoperability with the API using separate SQLite databases.
+
+Full project gate:
+- Command: npm test -- --runInBand --coverage
+- Result: 19 suites passed; 232 tests passed; 9 tests are todo.
+- Global coverage: 92.04% statements and 85.21% branches (minimum: 85%).
+- Syntax checks and git diff --check passed.
+- npm run start:api smoke test passed; the live CLI returned 401 for a protected
+  route without credentials and wrote a structured request log entry.
+- Node emitted its experimental warning for node:sqlite; backend runtime
+  requires Node.js 22.5 or later.
+
+Scope and limitations:
+- No mock-api or mock-api-tests files were changed.
+- App.tsx now supports secure credentials, a configurable API URL, and manual
+  synchronization through the WNT-11 backend.
+- HTTPS termination, deployment hosting, and physical-device network validation are
+  outside this host integration gate.
+- No commit was created.

@@ -1,39 +1,54 @@
-TEST-GATE - WNT-11 Server API Resource Management
+TEST-GATE - WNT-11 Production API Resource Management
 
-Date: 2026-11-08
+Date: 2026-11-09
 Requirements: REQ-F-030 through REQ-F-034
-Scope: SRS/OpenAPI traceability and HTTP acceptance tests for Entry, Book,
-Chapter, Tag, their supported associations, and Entry Links.
+Scope: SQLite-backed Node.js REST API implementation and HTTP acceptance tests
+for Entry, Book, Chapter, Tag, their supported associations, Entry Links,
+account authentication, and authenticated-user isolation.
 
 Gate definition:
-- Acceptance test file: tests/wnt-11-api-resource-management.test.js.
-- Tests launch the existing stateful mock-api/server.js as a child process on
-  an ephemeral localhost port; no mock server code or mock-api-tests files are
-  modified.
+- Production API implementation: src/wnt11/api-server.js with persistent
+  SQLite schema in src/wnt11/database.js and CLI startup in src/wnt11/cli.js.
+- Production integration test file: tests/wnt-11-backend.test.js; it starts
+  the API against a real temporary SQLite database.
+- Mock regression file: tests/wnt-11-api-resource-management.test.js; it still
+  launches the existing stateful mock-api/server.js as a child process.
+- No mock-api or mock-api-tests files are modified.
 - Traceability tests verify each REQ-F-030 through REQ-F-034 and its AC appears
   in the SRS, the requirement is present in OpenAPI, and the matrix maps it to
   WNT-11.
-- HTTP scenarios cover Entry/Book/Chapter/Tag CRUD including PUT replacement,
-  create/read response headers, missing/malformed/stale ETag preconditions,
-  Book-scoped Chapters, validation and media-type errors, list pagination and
-  association filters, duplicate/missing relationships, symmetric Entry Links,
-  relationship cleanup, unauthenticated access, and cross-user isolation.
-- Runtime evidence applies only to the in-memory API mock. It does not establish
-  production backend readiness or satisfy the backend coverage portion of
-  REQ-NF-014.
+- Production HTTP scenarios cover resource CRUD/PUT/PATCH, ETag versions,
+  nested Chapters, pagination, association filters, duplicate/missing
+  relationships, symmetric links, cascading relationship cleanup, account
+  registration/login/refresh, cross-user denial, SQLite restart persistence,
+  sync push/pull, idempotency, version conflicts, cursor isolation, and
+  client/server resource-ID mapping.
+- Runtime evidence includes the production SQLite-backed API and the existing
+  in-memory mock regression suite. It does not establish deployed HTTPS,
+  reverse-proxy, device/client authentication wiring, or production hosting.
+- The backend uses Node's built-in node:sqlite module; Node.js 22.5 or later is
+  required to run it.
 - Commands:
+  npm test -- --runInBand tests\wnt-11-backend.test.js
   npm test -- --runInBand tests\wnt-11-api-resource-management.test.js
   npm test -- --runInBand --coverage
-- Gate criteria: traceability and all acceptance scenarios pass; child server
-  shuts down cleanly; existing 85% statement and branch coverage thresholds
-  remain enforced by the full Jest run.
+- Run locally with API_JWT_SECRET set to a random secret of at least 32
+  characters, then run npm run start:api. API_DATABASE_PATH, HOST, and PORT
+  configure the SQLite file and listener.
+- Gate criteria: production and mock acceptance scenarios pass; temporary
+  servers shut down cleanly; existing 85% statement and branch coverage
+  thresholds remain enforced by the full Jest run.
 
 Constraints:
 - Do not modify mock-api/server.js or any mock-api-tests files.
 - No documentation files are added; gate and execution results are maintained
   under logs/.
-- No production API implementation is present in src/ at this ticket stage.
+- App.tsx now has configurable API URL and secure account wiring, plus manual
+  synchronization through the WNT-11 backend. It does not automatically sync.
+- A local authenticated app/backend integration test passes. Deployment,
+  HTTPS termination, physical-device network access, and hosted-service
+  validation remain outside this host gate.
 
 Execution status: EXECUTED; see logs/test-results-WNT-11.txt.
-Decision: PASS for the expanded stateful mock acceptance scenarios only;
-production API readiness remains unverified.
+Decision: PASS for host resource and sync integration; deployment and
+physical-device network validation remain separate release gates.

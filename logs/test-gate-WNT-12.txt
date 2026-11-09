@@ -1,18 +1,21 @@
 TEST-GATE - WNT-12 Offline Change Synchronization
 
-Date: 2026-11-08
+Date: 2026-11-09
 Requirements: REQ-F-035 through REQ-F-037; related offline durability
 criteria AC-NF-003 and AC-NF-004.
 Scope: SRS/OpenAPI traceability, synchronization transport and service,
 SQLite outbox/conflict persistence, remote resource application, cursor
-transactionality, retry behavior, conflict resolution, and local change
-queueing.
+transactionality, retry behavior, conflict status, local change queueing, and
+mobile application account/sync wiring.
 
 Gate definition:
 - Consumer-contract and traceability tests:
   tests/wnt-12-synchronization.test.js.
 - Real SQLite synchronization persistence and rollback test:
   tests/wnt-12-sqlite-sync.integration.test.js.
+- Authenticated app-client/server round trip with separate local/server SQLite
+  databases: tests/wnt-12-app-sync.integration.test.js.
+- Secure API session tests: tests/wnt-12-api-session.test.js.
 - Existing local workflow regression coverage:
   tests/sqlite-persistence.integration.test.js.
 - Full Jest statement and branch coverage thresholds: at least 85% each.
@@ -34,17 +37,21 @@ Implemented behavior:
   against the server's latest version.
 - Records sync completion and failure events through the diagnostic audit log.
 - Wires Entry, Book, Chapter, Tag, and relationship writes into the outbox.
+- App.tsx restores secure credentials and a configurable API URL, supports
+  registration/login/logout, provides manual Sync Now, and displays persisted
+  unresolved conflict counts without conflict-resolution controls.
 
 Constraints and limitations:
-- Do not modify mock-api or mock-api-tests. The transport is verified with
-  injected responses; there is no production backend in this repository.
-- App.tsx has no API URL or authentication provider. Production synchronization
-  requires supplying a configured syncApi to createApplication; no automatic
-  connectivity trigger or user-facing sync/conflict UI is included.
-- Device/emulator connectivity and server interoperability remain unverified.
+- Do not modify mock-api or mock-api-tests. In addition to injected transport
+  tests, app sync is verified against the local WNT-11 SQLite backend.
+- No automatic connectivity trigger or conflict-resolution controls are
+  included. Sync is user-initiated.
+- The authenticated round-trip is verified against the local WNT-11 SQLite
+  backend in tests, but deployment, HTTPS termination, physical-device network
+  connectivity, and a production hosted service remain unverified.
 - No documentation files are added; ticket records are kept in logs/.
 
 Execution status: IMPLEMENTATION TEST GATE PASSED; see
 logs/test-results-WNT-12.txt and logs/end-WNT-12.txt.
-Decision: PASS for host tests and configured-client implementation; production
-service rollout remains gated on API/auth wiring and device/server validation.
+Decision: PASS for host tests and app/client/backend integration; production
+service rollout remains gated on deployment and device-network validation.

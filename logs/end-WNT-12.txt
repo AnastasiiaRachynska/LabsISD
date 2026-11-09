@@ -1,7 +1,7 @@
 END LOG - WNT-12 Offline Change Synchronization
 
-Date: 2026-11-08
-Status: Implementation complete; host TEST-GATE passed.
+Date: 2026-11-09
+Status: App-to-backend integration complete; host TEST-GATE passed.
 
 Implementation:
 - Added injectable authenticated sync HTTP transport and client service for
@@ -15,22 +15,26 @@ Implementation:
 - Wired local Entry, Book, Chapter, Tag, and relationship writes into the
   durable outbox, including coalescing edits/deletes made before first sync.
 - Added synchronization completion/failure events to the existing audit log.
+- Added secure mobile API URL/session storage, account registration/login,
+  authenticated transport wiring into application composition, and manual
+  Sync Now with visible failures and unresolved-conflict status.
+- Added an authenticated integration test that pushes a local Entry and pulls a
+  server-created sync Entry using separate SQLite databases.
 - Updated the WNT-12 traceability rows and ticket gate/results logs.
 
 Verification:
-- Full suite: 16 suites passed; 200 passed; 9 todo.
-- Coverage: 92.34% statements and 86.15% branches; both gates >= 85%.
-- TypeScript check, changed-module syntax checks, diff whitespace check, and
-  Android/iOS Expo exports passed.
+- Full suite: 19 suites passed; 232 passed; 9 todo.
+- Coverage: 92.04% statements and 85.21% branches; both gates >= 85%.
+- TypeScript check, focused tests, diff whitespace check, and Android/iOS Expo
+  exports passed.
 - No files in mock-api or mock-api-tests were modified.
 - Detailed evidence: logs/test-results-WNT-12.txt.
 
-Remaining release integration:
-- App.tsx currently has no API base URL or authentication provider.
-  Supply a configured syncApi to createApplication before enabling production
-  synchronization.
-- No automatic connectivity scheduler, user-facing conflict UI, live backend,
-  or physical-device sync verification is present.
+Remaining release work:
+- Automatic connectivity scheduling and conflict-resolution controls are not
+  included; sync is manual and conflict state is informational.
+- Deployment/HTTPS, physical-device network access, and validation against a
+  hosted production backend remain outstanding.
 
 Suggested commit:
 feat(wnt-12): implement offline synchronization
