@@ -247,6 +247,7 @@ describe("WNT-12 offline synchronization", () => {
             changeId: "1",
             resourceType: "entry",
             operation: "create",
+            clientResourceId: "entry-new",
             resource: { content: "Created offline", entryType: "General Note" },
           },
           {
