@@ -583,6 +583,14 @@ describe("SQLite repositories", () => {
       local_version: JSON.stringify(conflict.localVersion),
       server_version: JSON.stringify(conflict.serverVersion),
     });
+    database.getAllAsync.mockResolvedValue([{
+      change_id: "change-1",
+      resource_type: "entry",
+      resource_id: "entry-1",
+      local_version: JSON.stringify(conflict.localVersion),
+      server_version: JSON.stringify(conflict.serverVersion),
+    }]);
+    await expect(repositories.conflicts.list()).resolves.toEqual([conflict]);
     await expect(repositories.conflicts.findByChangeId("change-1")).resolves.toEqual(conflict);
     await repositories.conflicts.remove("change-1");
     expect(database.runAsync).toHaveBeenCalledWith(
