@@ -1,0 +1,30 @@
+TEST-GATE — WNT-18 API Liveness Endpoint
+
+Requirement: Approved Addendum 03, REQ-F-040 and AC-F-040.
+Scope: Public GET /api/v1/health liveness response and rejection of other
+methods; no database readiness check or diagnostic response details.
+
+Test-first changes:
+- Added two HTTP integration tests to tests/wnt-11-backend.test.js before any
+  production source changes.
+- Positive case sends GET with no credentials and verifies HTTP 200,
+  application/json, exact {"status":"ok"} body, request ID, and standard
+  completed-request logging without an authenticated user.
+- Negative case sends unauthenticated POST and verifies HTTP 405, Allow: GET,
+  problem response, request ID, and standard completed-request logging.
+- No production source code was modified during this gate.
+
+Red-phase command:
+  npm test -- --runInBand tests\wnt-11-backend.test.js
+
+Red-phase result:
+- 1 suite failed as expected; 13 existing tests passed and the 2 new tests
+  failed.
+- Both new scenarios received 401 UNAUTHENTICATED instead of their expected
+  statuses because the unimplemented health path is currently processed by
+  bearer authentication.
+- No unrelated test failure was observed.
+
+Decision: GO received from the user after review of the red-phase evidence.
+This decision authorizes implementation to begin. TEST-GATE ends here; it does
+not include or assess implementation or green-phase results.
