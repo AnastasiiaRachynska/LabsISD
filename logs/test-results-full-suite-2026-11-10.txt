@@ -1,0 +1,24 @@
+FULL TEST SUITE RESULTS
+
+Date: 2026-11-10
+Command:
+  npm test -- --runInBand --coverage
+
+Result:
+- Test suites: 19 passed, 19 total.
+- Tests: 234 passed, 9 todo, 243 total; 0 failed.
+- Snapshots: 0 total.
+- Duration: 4.571 seconds.
+
+Coverage:
+- Statements: 92.07% (configured minimum: 85%).
+- Branches: 85.25% (configured minimum: 85%).
+- Functions: 98.01%.
+- Lines: 92.09%.
+- Both configured coverage thresholds passed.
+
+Notes:
+- Jest reported that SQLite is experimental in this Node.js version; the
+  warning did not affect test execution.
+- This run executes the complete Jest suite. It does not replace separate
+  device, deployment, or human acceptance validation.
