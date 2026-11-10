@@ -1,0 +1,69 @@
+WNT-18 IMPLEMENTATION DECISION
+
+Date: 2026-11-10
+Decision history:
+- Initial decision: REVISE — technical verification passed; acceptance
+  closure was held pending human validation and artifact reconciliation.
+- Final decision: GO — project owner accepted the liveness-only behavior and
+  the agreed artifact and schedule updates were completed.
+
+Scope reviewed:
+- Approved Addendum 03, REQ-F-040 / AC-F-040.
+- WNT-18 implementation, TEST-GATE, post-refactor checks, current OpenAPI
+  contract, traceability evidence, full Jest run, and prior human-validation
+  response.
+
+Evidence:
+- TEST-GATE recorded the expected red phase: both new integration cases
+  received 401 before the unauthenticated health route was implemented.
+  The user subsequently gave GO.
+- Implementation exposes GET /api/v1/health before bearer authentication,
+  returns the exact static {"status":"ok"} JSON body, and rejects other
+  methods with 405 and Allow: GET. It does not query SQLite and remains on the
+  normal request logging path.
+- Focused API/contract tests passed; the post-refactor full regression run
+  passed 19 suites and 234 tests, with 9 todo and no failures. Coverage was
+  92.07% statements and 85.25% branches, above the configured 85% thresholds.
+- OpenAPI 3.1 contract validation passed for the public operation, requirement
+  mapping, response schema, and supported method header.
+- Live HTTP validation confirmed GET success without SQLite access, POST and
+  HEAD rejection, request logging, and continued authentication on Entries.
+- The complete test report is logs/test-results-full-suite-2026-11-10.txt.
+
+Initial reasons for REVISE (resolved below):
+1. Human validation remains explicitly on hold. The user has not yet confirmed
+   that liveness-only behavior satisfies the original operational need, or
+   requested a readiness check. The implementation must not be treated as
+   product-accepted until this intent is resolved.
+2. The Addendum 03 impact table still says implementation evidence is pending,
+   which conflicts with the completed implementation and test logs.
+3. The traceability matrix has been updated with current WNT-18 evidence and
+   records that several platform/performance NFR scenarios remain todo. Those
+   todos do not fail Jest or the configured coverage gate, but they are not
+   proof of platform acceptance.
+4. WNT-18 has no scheduled period in the current project plan; scheduling is
+   still an owner decision.
+
+Actions agreed to close REVISE:
+- Obtain human acceptance that liveness-only is sufficient, or revise the
+  requirement/OpenAPI/tests to explicitly include readiness and run the
+  corresponding change-control and test gates.
+- Correct the stale implementation-status wording in Addendum 03.
+- Have the project owner schedule WNT-18 if the plan requires dated tickets.
+- Track remaining device/performance validation todos separately; do not
+  represent them as passed.
+
+Final owner disposition:
+- The project owner stated agreement with the listed closure actions.
+- Human validation accepts liveness-only behavior; database readiness remains
+  explicitly out of scope and would require a separately approved change.
+- Updated the addendum impact/status wording and traceability matrix.
+- Scheduled WNT-18 for 10 November 2026 in spec/plan.tex.
+- Remaining platform/performance todo checks remain open and are not claimed
+  as passed; they do not block acceptance of the WNT-18 addendum.
+
+Final rationale:
+- No technical regression or OpenAPI contract failure was observed.
+- Automated and live HTTP checks passed, and the user accepts the intended
+  liveness-only scope.
+- Decision: GO for WNT-18 and Addendum 03 acceptance.
